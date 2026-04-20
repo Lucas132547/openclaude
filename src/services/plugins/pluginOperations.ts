@@ -11,8 +11,9 @@
  * - Return result objects indicating success/failure with messages
  * - Can throw errors for unexpected failures
  */
-import { dirname, join } from 'path'
+import { basename, dirname, join, resolve } from 'path'
 import { getOriginalCwd } from '../../bootstrap/state.js'
+import { getCwd } from '../../utils/cwd.js'
 import { isBuiltinPluginId } from '../../plugins/builtinPlugins.js'
 import type { LoadedPlugin, PluginManifest } from '../../types/plugin.js'
 import { isENOENT, toError } from '../../utils/errors.js'
@@ -27,6 +28,7 @@ import {
   formatReverseDependentsSuffix,
 } from '../../utils/plugins/dependencyResolver.js'
 import {
+  addInstalledPlugin,
   loadInstalledPluginsFromDisk,
   loadInstalledPluginsV2,
   removePluginInstallation,
@@ -49,6 +51,7 @@ import {
 import {
   cachePlugin,
   copyPluginToVersionedCache,
+  findPluginManifest,
   getVersionedCachePath,
   getVersionedZipCachePath,
   loadAllPlugins,
@@ -326,6 +329,68 @@ export async function installPluginOp(
 
   const { name: pluginName, marketplace: marketplaceName } =
     parsePluginIdentifier(plugin)
+
+  // ── Handle local path installation ──
+  // Detect paths starting with ./ , ../ , / or a Windows drive letter
+  const isLocalPath =
+    plugin.startsWith('.') ||
+    plugin.startsWith('/') ||
+    (process.platform === 'win32' && /^[a-zA-Z]:/.test(plugin))
+
+  if (isLocalPath) {
+    const absPath = resolve(plugin)
+    const manifestPath = await findPluginManifest(absPath)
+    // Fallback name is the directory name
+    const fallbackName = basename(absPath)
+    const manifest = await loadPluginManifest(manifestPath, fallbackName, absPath)
+
+    if (!manifest || (manifest.name === fallbackName && !manifestPath)) {
+      // If no manifest found and we only have the fallback name, check if it's REALLY a plugin
+      // For now, we allow it to be a plugin even without a manifest if it has a commands/agents/etc dir
+      // but let's be strict for manual path install to avoid accidental installs of random dirs.
+      if (!manifestPath) {
+        return {
+          success: false,
+          message: `No plugin manifest (plugin.json) found at ${absPath}`,
+        }
+      }
+    }
+
+    const localPluginId = `${manifest.name}@local`
+    const now = new Date().toISOString()
+
+    // Register in installed_plugins.json (V2)
+    addInstalledPlugin(
+      localPluginId,
+      {
+        version: manifest.version || 'unknown',
+        installedAt: now,
+        lastUpdated: now,
+        installPath: absPath,
+      },
+      scope,
+      scope !== 'user' ? getCwd() : undefined,
+    )
+
+    // Write to settings
+    const settingSource = scopeToSettingSource(scope)
+    updateSettingsForSource(settingSource, {
+      enabledPlugins: {
+        ...getSettingsForSource(settingSource)?.enabledPlugins,
+        [localPluginId]: true,
+      },
+    })
+
+    clearAllCaches()
+
+    return {
+      success: true,
+      message: `Successfully installed local plugin: ${localPluginId} (scope: ${scope})`,
+      pluginId: localPluginId,
+      pluginName: manifest.name,
+      scope,
+    }
+  }
 
   // ── Search materialized marketplaces for the plugin ──
   let foundPlugin: PluginMarketplaceEntry | undefined

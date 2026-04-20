@@ -293,7 +293,7 @@ const PluginManifestMetadataSchema = lazySchema(() =>
       .string()
       .optional()
       .describe('Brief, user-facing explanation of what the plugin provides'),
-    author: PluginAuthorSchema()
+    author: z.union([z.string(), PluginAuthorSchema()])
       .optional()
       .describe('Information about the plugin creator or maintainer'),
     homepage: z

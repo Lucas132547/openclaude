@@ -356,7 +356,10 @@ function convertMessages(
           role: 'assistant',
           content: (() => {
             const c = convertContentBlocks(textContent)
-            return typeof c === 'string' ? c : Array.isArray(c) ? c.map((p: { text?: string }) => p.text ?? '').join('') : ''
+            const text = typeof c === 'string' ? c : Array.isArray(c) ? c.map((p: { text?: string }) => p.text ?? '').join('') : ''
+            // OpenAI/Gemini: if tool_calls present, content should be null if empty.
+            // Some providers reject "" for assistant role.
+            return text === '' ? (toolUses.length > 0 ? null : '') : text
           })(),
         }
 
@@ -1432,6 +1435,8 @@ class OpenAIShimMessages {
       signal: options?.signal,
     }
 
+    logForDebugging('OpenAI shim request', { url: chatCompletionsUrl, body })
+
     const maxAttempts = isGithub ? GITHUB_429_MAX_RETRIES : 1
     let response: Response | undefined
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -1455,6 +1460,11 @@ class OpenAIShimMessages {
       // Read body exactly once here — Response body is a stream that can only
       // be consumed a single time.
       const errorBody = await response.text().catch(() => 'unknown error')
+      logForDebugging('OpenAI shim error', {
+        status: response.status,
+        url: chatCompletionsUrl,
+        errorBody,
+      })
       const rateHint =
         isGithub && response.status === 429 ? formatRetryAfterHint(response) : ''
 

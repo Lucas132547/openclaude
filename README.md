@@ -95,6 +95,7 @@ Beginner-friendly guides:
 - [Non-Technical Setup](docs/non-technical-setup.md)
 - [Windows Quick Start](docs/quick-start-windows.md)
 - [macOS / Linux Quick Start](docs/quick-start-mac-linux.md)
+- [Plugins Guide](docs/plugins.md)
 
 Advanced and source-build guides:
 

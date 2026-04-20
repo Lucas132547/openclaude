@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.1-dev](https://github.com/Gitlawb/openclaude) (2026-04-16)
+
+### Features
+
+* **plugins:** support direct installation from local directories/paths ([#675](https://github.com/Gitlawb/openclaude/issues/675))
+* **plugins:** allow string `author` field in `plugin.json` for broader community compatibility
+
+### Bug Fixes
+
+* **openai-shim:** fix Gemini API loop interruption by correctly handling empty assistant content during tool use
+* **plugins:** fix `@local` marketplace resolution during plugin startup and listing
+* **openai-shim:** add detailed debug logging for raw API requests and error payloads
+
 ## [0.3.0](https://github.com/Gitlawb/openclaude/compare/v0.2.3...v0.3.0) (2026-04-14)
 
 

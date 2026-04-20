@@ -1144,14 +1144,31 @@ export async function cachePlugin(
  * @returns A valid PluginManifest object (either loaded or default)
  * @throws Error if manifest exists but is invalid (corrupt JSON or schema validation failure)
  */
+/**
+ * Find the manifest file in a plugin directory.
+ * Checks for plugin.json in the root and in .claude-plugin/ subdirectory.
+ */
+export async function findPluginManifest(pluginPath: string): Promise<string | null> {
+  const possiblePaths = [
+    join(pluginPath, 'plugin.json'),
+    join(pluginPath, '.claude-plugin', 'plugin.json'),
+  ]
+
+  for (const p of possiblePaths) {
+    if (await pathExists(p)) return p
+  }
+
+  return null
+}
+
 export async function loadPluginManifest(
-  manifestPath: string,
+  manifestPath: string | null,
   pluginName: string,
   source: string,
 ): Promise<PluginManifest> {
   // Check if manifest file exists
   // If not, create a minimal manifest to allow plugin to function
-  if (!(await pathExists(manifestPath))) {
+  if (!manifestPath || !(await pathExists(manifestPath))) {
     // Return default manifest with provided name and source
     return {
       name: pluginName,
@@ -1356,7 +1373,7 @@ export async function createPluginFromPath(
 
   // Step 1: Load or create the plugin manifest
   // This provides metadata about the plugin (name, version, etc.)
-  const manifestPath = join(pluginPath, '.claude-plugin', 'plugin.json')
+  const manifestPath = await findPluginManifest(pluginPath)
   const manifest = await loadPluginManifest(manifestPath, fallbackName, source)
 
   // Step 2: Create the base plugin object
@@ -1963,6 +1980,46 @@ async function loadPluginsFromMarketplaces({
     marketplacePluginEntries.map(async ([pluginId, enabledValue]) => {
       const { name: pluginName, marketplace: marketplaceName } =
         parsePluginIdentifier(pluginId)
+
+      // Check if this is a locally installed plugin (e.g. from an absolute path)
+      // These are registered with the virtual 'local' marketplace
+      if (marketplaceName === 'local') {
+        const installEntry = installedPluginsData.plugins[pluginId]?.[0]
+        if (!installEntry || !installEntry.installPath || !(await pathExists(installEntry.installPath))) {
+          errors.push({
+            type: 'plugin-not-found',
+            source: pluginId,
+            pluginId: pluginName!,
+            marketplace: marketplaceName!,
+          })
+          return null
+        }
+
+        // We use a relative path source ('.') so the loader treats marketplaceInstallLocation
+        // (which we provide as the actual installPath) as the final directory, skipping external downloads.
+        const fakeEntry: PluginMarketplaceEntry = {
+          name: pluginName!,
+          source: '.',
+        }
+
+        return cacheOnly
+          ? loadPluginFromMarketplaceEntryCacheOnly(
+              fakeEntry,
+              installEntry.installPath,
+              pluginId,
+              enabledValue === true,
+              errors,
+              installEntry.installPath,
+            )
+          : loadPluginFromMarketplaceEntry(
+              fakeEntry,
+              installEntry.installPath,
+              pluginId,
+              enabledValue === true,
+              errors,
+              installEntry.version,
+            )
+      }
 
       // Check if marketplace source is allowed by enterprise policy
       const marketplaceConfig = knownMarketplaces[marketplaceName!]
