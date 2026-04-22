@@ -159,7 +159,7 @@ export function getProviderPresetDefaults(
         provider: 'openai',
         name: 'Google Gemini',
         baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3-flash-preview-preview',
         apiKey: '',
         requiresApiKey: true,
       }
@@ -655,9 +655,9 @@ export function deleteProviderProfile(profileId: string): {
       openaiAdditionalModelOptionsCacheByProfile: cacheByProfile,
       openaiAdditionalModelOptionsCache: nextActiveId
         ? getModelCacheByProfile(nextActiveId, {
-            ...current,
-            openaiAdditionalModelOptionsCacheByProfile: cacheByProfile,
-          })
+          ...current,
+          openaiAdditionalModelOptionsCacheByProfile: cacheByProfile,
+        })
         : [],
     }
   })

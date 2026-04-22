@@ -290,16 +290,18 @@ function convertContentBlocks(
   return parts
 }
 
-function isGeminiMode(): boolean {
+function isGeminiMode(model?: string): boolean {
   return (
     isEnvTruthy(process.env.CLAUDE_CODE_USE_GEMINI) ||
-    hasGeminiApiHost(process.env.OPENAI_BASE_URL)
+    hasGeminiApiHost(process.env.OPENAI_BASE_URL) ||
+    (model?.startsWith('gemini-') ?? false)
   )
 }
 
 function convertMessages(
   messages: Array<{ role: string; message?: { role?: string; content?: unknown }; content?: unknown }>,
   system: unknown,
+  model?: string,
 ): OpenAIMessage[] {
   const result: OpenAIMessage[] = []
 
@@ -390,7 +392,7 @@ function convertMessages(
               }
 
               // Handle Gemini thought_signature
-              if (isGeminiMode()) {
+              if (isGeminiMode(model)) {
                 // If the model provided a signature in the tool_use block itself (e.g. from a previous Turn/Step)
                 // Use thinkingBlock.signature for ALL tool calls in the same assistant turn if available.
                 // The API requires the same signature on every replayed function call part in a parallel set.
@@ -529,8 +531,9 @@ function normalizeSchemaForOpenAI(
 
 function convertTools(
   tools: Array<{ name: string; description?: string; input_schema?: Record<string, unknown> }>,
+  model?: string,
 ): OpenAITool[] {
-  const isGemini = isGeminiMode()
+  const isGemini = isGeminiMode(model)
 
   return tools
     .filter(t => t.name !== 'ToolSearchTool') // Not relevant for OpenAI
@@ -1279,6 +1282,7 @@ class OpenAIShimMessages {
         content?: unknown
       }>,
       params.system,
+      request.resolvedModel,
     )
 
     const body: Record<string, unknown> = {
@@ -1308,7 +1312,7 @@ class OpenAIShimMessages {
     }
 
     if (request.reasoning?.effort) {
-      if (isGeminiMode() && request.reasoning.effort === 'xhigh') {
+      if (isGeminiMode(request.resolvedModel) && request.reasoning.effort === 'xhigh') {
         body.reasoning_effort = 'high'
       } else {
         body.reasoning_effort = request.reasoning.effort
@@ -1330,7 +1334,7 @@ class OpenAIShimMessages {
 
     // mistral and gemini don't recognize body.store — Gemini returns 400
     // "Invalid JSON payload received. Unknown name 'store': Cannot find field."
-    if (isMistral || isGeminiMode()) {
+    if (isMistral || isGeminiMode(request.resolvedModel)) {
       delete body.store
     }
 
@@ -1344,6 +1348,7 @@ class OpenAIShimMessages {
           description?: string
           input_schema?: Record<string, unknown>
         }>,
+        request.resolvedModel,
       )
       if (converted.length > 0) {
         body.tools = converted
@@ -1371,7 +1376,7 @@ class OpenAIShimMessages {
       ...filterAnthropicHeaders(options?.headers),
     }
 
-    const isGemini = isGeminiMode()
+    const isGemini = isGeminiMode(request.resolvedModel)
     const apiKey = this.providerOverride?.apiKey ?? process.env.OPENAI_API_KEY ?? ''
     // Detect Azure endpoints by hostname (not raw URL) to prevent bypass via
     // path segments like https://evil.com/cognitiveservices.azure.com/

@@ -196,8 +196,8 @@ export const MODEL_COSTS: Record<ModelShortName, ModelCosts> = {
   [firstPartyNameToCanonical(CLAUDE_OPUS_4_6_CONFIG.firstParty)]:
     COST_TIER_5_25,
   'gemini-3.1-pro': COST_GEMINI_3_1_PRO_LOW,
-  'gemini-3-flash': COST_GEMINI_3_FLASH,
-  'gemini-3-flash-lite': COST_GEMINI_3_FLASH_LITE,
+  'gemini-3-flash-preview': COST_GEMINI_3_FLASH,
+  'gemini-3-flash-preview-lite': COST_GEMINI_3_FLASH_LITE,
   'gemini-2.5-pro': COST_GEMINI_2_5_PRO_LOW,
   'gemini-2.5-flash': COST_GEMINI_2_5_FLASH,
   'gemini-2.0-flash': COST_GEMINI_2_0_FLASH,
@@ -211,11 +211,11 @@ function tokensToUSDCost(modelCosts: ModelCosts, usage: Usage): number {
     (usage.input_tokens / 1_000_000) * modelCosts.inputTokens +
     (usage.output_tokens / 1_000_000) * modelCosts.outputTokens +
     ((usage.cache_read_input_tokens ?? 0) / 1_000_000) *
-      modelCosts.promptCacheReadTokens +
+    modelCosts.promptCacheReadTokens +
     ((usage.cache_creation_input_tokens ?? 0) / 1_000_000) *
-      modelCosts.promptCacheWriteTokens +
+    modelCosts.promptCacheWriteTokens +
     (usage.server_tool_use?.web_search_requests ?? 0) *
-      modelCosts.webSearchRequests
+    modelCosts.webSearchRequests
   )
 }
 

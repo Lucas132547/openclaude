@@ -290,7 +290,7 @@ export const COPILOT_MODELS: Record<string, CopilotModel> = {
   },
   'gemini-3-flash-preview': {
     id: 'gemini-3-flash-preview',
-    name: 'Gemini 3 Flash',
+    name: 'Gemini 3 Flash Preview',
     family: 'gemini-flash',
     attachment: true,
     reasoning: true,

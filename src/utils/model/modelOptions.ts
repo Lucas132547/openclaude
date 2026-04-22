@@ -319,12 +319,12 @@ function getGeminiModelOptions(): ModelOption[] {
       description: 'Balanced performance · Best for everyday coding tasks',
     },
     {
-      value: 'gemini-3-flash',
+      value: 'gemini-3-flash-preview',
       label: 'Gemini 3 Flash',
       description: 'High speed · Optimal for fast iterative development',
     },
     {
-      value: 'gemini-3-flash-lite',
+      value: 'gemini-3-flash-preview-lite',
       label: 'Gemini 3 Flash-Lite',
       description: 'Fastest & cheapest · Built for high-volume tasks',
     },
@@ -712,9 +712,9 @@ function filterModelOptionsByAllowlist(options: ModelOption[]): ModelOption[] {
   const filtered = !settings.availableModels
     ? options // No restrictions
     : options.filter(
-    opt =>
-      opt.value === null || (opt.value !== null && isModelAllowed(opt.value)),
-  )
+      opt =>
+        opt.value === null || (opt.value !== null && isModelAllowed(opt.value)),
+    )
 
   // Select state uses option values as identity keys. If two entries share the
   // same value (e.g. provider-specific aliases collapsing to one model ID),
