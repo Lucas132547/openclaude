@@ -418,6 +418,7 @@ describe('applyActiveProviderProfileFromConfig', () => {
       providerProfiles: [
         buildProfile({
           id: 'saved_moonshot',
+          provider: 'openai',
           baseUrl: 'https://api.moonshot.ai/v1',
           model: 'kimi-k2.6',
         }),
@@ -440,6 +441,7 @@ describe('applyActiveProviderProfileFromConfig', () => {
       providerProfiles: [
         buildProfile({
           id: 'saved_moonshot',
+          provider: 'openai',
           baseUrl: 'https://api.moonshot.ai/v1',
           model: 'kimi-k2.6',
         }),
@@ -1040,7 +1042,7 @@ describe('deleteProviderProfile', () => {
 
     saveMockGlobalConfig(current => ({
       ...current,
-      providerProfiles: [buildProfile({ id: 'only_profile' })],
+      providerProfiles: [buildProfile({ id: 'only_profile', provider: 'openai' })],
       activeProviderProfileId: 'only_profile',
     }))
 

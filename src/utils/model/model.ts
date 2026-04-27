@@ -280,7 +280,7 @@ export function getDefaultHaikuModel(): ModelName {
   }
   // Gemini provider
   if (getAPIProvider() === 'gemini') {
-    return process.env.GEMINI_MODEL || process.env.OPENAI_MODEL || 'gemini-3-flash-preview-lite'
+    return process.env.GEMINI_MODEL || process.env.OPENAI_MODEL || 'gemini-3-flash-preview'
   }
   // NVIDIA NIM
   if (getAPIProvider() === 'nvidia-nim') {

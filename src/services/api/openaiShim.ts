@@ -419,7 +419,7 @@ function isGeminiMode(model?: string): boolean {
   return (
     isEnvTruthy(process.env.CLAUDE_CODE_USE_GEMINI) ||
     hasGeminiApiHost(process.env.OPENAI_BASE_URL) ||
-    (model?.startsWith('gemini-') ?? false)
+    (typeof model === 'string' && model.startsWith('gemini-'))
   )
 }
 
@@ -779,7 +779,7 @@ function convertTools(
   tools: Array<{ name: string; description?: string; input_schema?: Record<string, unknown> }>,
   model?: string,
 ): OpenAITool[] {
-  const isGemini = isGeminiMode(model)
+  const isGemini = isGeminiMode(typeof model === 'string' ? model : undefined)
 
   return tools
     .filter(t => t.name !== 'ToolSearchTool') // Not relevant for OpenAI
@@ -1601,7 +1601,7 @@ class OpenAIShimMessages {
     // DeepSeek, and Z.AI have not published support for the parameter either;
     // strip it preemptively to avoid the same class of error on strict-parse
     // providers.
-    if (isMistral || isGeminiMode(request.resolvedModel) || isMoonshot || isDeepSeek || isZai) {
+    if (isMistral || isGeminiMode(typeof request.resolvedModel === 'string' ? request.resolvedModel : undefined) || isMoonshot || isDeepSeek || isZai) {
       delete body.store
     }
 
@@ -1719,6 +1719,7 @@ class OpenAIShimMessages {
             description?: string
             input_schema?: Record<string, unknown>
           }>,
+          typeof request.resolvedModel === 'string' ? request.resolvedModel : undefined
         )
         if (convertedTools.length > 0) {
           responsesBody.tools = convertedTools
@@ -1734,7 +1735,7 @@ class OpenAIShimMessages {
       ...filterAnthropicHeaders(options?.headers),
     }
 
-    const isGemini = isGeminiMode(request.resolvedModel)
+    const isGemini = isGeminiMode(typeof request.resolvedModel === 'string' ? request.resolvedModel : undefined)
     const isMiniMax = !!process.env.MINIMAX_API_KEY
     const apiKey =
       this.providerOverride?.apiKey ??

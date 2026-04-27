@@ -380,6 +380,7 @@ function enforceStrictSchema(schema: unknown): Record<string, unknown> {
 
 export function convertToolsToResponsesTools(
   tools: Array<{ name?: string; description?: string; input_schema?: Record<string, unknown> }>,
+  model?: string
 ): ResponsesTool[] {
   return tools
     .filter(tool => tool.name && tool.name !== 'ToolSearchTool')
