@@ -473,6 +473,12 @@ export const SettingsSchema = lazySchema(() =>
         .boolean()
         .optional()
         .describe('Disable all hooks and statusLine execution'),
+      bashSecurityLevel: z
+        .enum(['static', 'smart'])
+        .optional()
+        .describe(
+          'Configures the security level for the Bash tool: "static" uses fast AST/Regex blocking, "smart" adds an LLM fallback for complex commands.',
+        ),
       // Which shell backs input-box `!` (see docs/design/ps-shell-selection.md §4.2)
       defaultShell: z
         .enum(['bash', 'powershell'])
