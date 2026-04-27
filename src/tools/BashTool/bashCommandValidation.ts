@@ -1,4 +1,7 @@
 import { tryParseShellCommand, ParseEntry } from '../../utils/bash/shellQuote.js'
+import { queryWithModel } from '../../services/api/claude.js'
+import { getSmallFastModel } from '../../utils/model/model.js'
+import { asSystemPrompt } from '../../utils/systemPromptType.js'
 
 const BLOCKED_EDITORS = new Set(['vi', 'vim', 'nano', 'ed'])
 const IN_PLACE_MODIFIERS = new Set(['sed', 'perl'])
@@ -140,4 +143,45 @@ export function detectBlockedFileModifications(command: string): boolean {
   }
 
   return false
+}
+
+/**
+ * Uses a fast LLM (e.g. Haiku or Flash Lite) to analyze if a command
+ * attempts to modify files locally, acting as a smart fallback.
+ */
+export async function isBlockedBySmartValidation(
+  command: string,
+  abortSignal: AbortSignal,
+  options: any,
+): Promise<boolean> {
+  // Only trigger on complex commands (heuristic)
+  if (command.length < 100 && !command.includes('|') && !command.includes('EOF')) {
+    return false
+  }
+
+  const systemPrompt = "Analyze this bash command. Does it attempt to modify, overwrite, or write new content to any file on the local filesystem (excluding /dev/null, temporary stdout manipulation, or purely read operations)? Output ONLY 'yes' or 'no'."
+
+  try {
+    const response = await queryWithModel({
+      systemPrompt: asSystemPrompt([systemPrompt]),
+      userPrompt: `<command>${command}</command>`,
+      signal: abortSignal,
+      options: {
+        ...options,
+        model: getSmallFastModel(),
+        maxOutputTokensOverride: 10,
+        temperature: 0,
+      },
+    })
+
+    const content = response.content
+    const text = typeof content === 'string'
+      ? content
+      : content.find((c: any) => c.type === 'text')?.text || ''
+
+    return text.trim().toLowerCase() === 'yes' || text.trim().toLowerCase().startsWith('yes')
+  } catch (error) {
+    // If the LLM fails, default to passing to not block the user unexpectedly
+    return false
+  }
 }
