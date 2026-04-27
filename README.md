@@ -13,7 +13,29 @@ Use OpenAI-compatible APIs, Gemini, GitHub Models, Codex OAuth, Codex, Ollama, A
 OpenClaude is also mirrored to GitLawb:
 [gitlawb.com/node/repos/z6MkqDnb/openclaude](https://gitlawb.com/node/repos/z6MkqDnb/openclaude)
 
-[Quick Start](#quick-start) | [Setup Guides](#setup-guides) | [Providers](#supported-providers) | [Source Build](#source-build-and-local-development) | [VS Code Extension](#vs-code-extension) | [Community](#community)
+[Quick Start](#quick-start) | [Setup Guides](#setup-guides) | [Providers](#supported-providers) | [Source Build](#source-build-and-local-development) | [VS Code Extension](#vs-code-extension) | [Sponsors](#sponsors) | [Community](#community)
+
+## Sponsors
+
+<p align="center">
+  <a href="https://gitlawb.com">
+    <img src="https://gitlawb.com/logo.png" alt="GitLawb logo" width="96">
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://bankr.bot">
+    <img src="https://bankr.bot/favicon.svg" alt="Bankr.bot logo" width="96">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://gitlawb.com"><strong>GitLawb</strong></a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://bankr.bot"><strong>Bankr.bot</strong></a>
+</p>
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/chart?repos=gitlawb/openclaude&type=date&legend=top-left)](https://www.star-history.com/?repos=gitlawb%2Fopenclaude&type=date&legend=top-left)
 
 ## Why OpenClaude
 
@@ -88,6 +110,16 @@ $env:OPENAI_MODEL="qwen2.5-coder:7b"
 openclaude
 ```
 
+### Using Ollama's launch command
+
+If you have [Ollama](https://ollama.com) installed, you can skip the env var setup entirely:
+
+```bash
+ollama launch openclaude --model qwen2.5-coder:7b
+```
+
+This automatically sets `ANTHROPIC_BASE_URL`, model routing, and auth so all API traffic goes through your local Ollama instance. Works with any model you have pulled — local or cloud.
+
 ## Setup Guides
 
 Beginner-friendly guides:
@@ -111,8 +143,8 @@ Advanced and source-build guides:
 | GitHub Models | `/onboard-github` | Interactive onboarding with saved credentials |
 | Codex OAuth | `/provider` | Opens ChatGPT sign-in in your browser and stores Codex credentials securely |
 | Codex | `/provider` | Uses existing Codex CLI auth, OpenClaude secure storage, or env credentials |
-| Ollama | `/provider` or env vars | Local inference with no API key |
-| Atomic Chat | advanced setup | Local Apple Silicon backend |
+| Ollama | `/provider`, env vars, or `ollama launch` | Local inference with no API key |
+| Atomic Chat | `/provider`, env vars, or `bun run dev:atomic-chat` | Local Model Provider; auto-detects loaded models |
 | Bedrock / Vertex / Foundry | env vars | Additional provider integrations for supported environments |
 
 ## What Works
@@ -139,12 +171,12 @@ For best results, use models with strong tool/function calling support.
 
 OpenClaude can route different agents to different models through settings-based routing. This is useful for cost optimization or splitting work by model strength.
 
-Add to `~/.claude/settings.json`:
+Add to `~/.openclaude.json`:
 
 ```json
 {
   "agentModels": {
-    "deepseek-chat": {
+    "deepseek-v4-flash": {
       "base_url": "https://api.deepseek.com/v1",
       "api_key": "sk-your-key"
     },
@@ -154,10 +186,10 @@ Add to `~/.claude/settings.json`:
     }
   },
   "agentRouting": {
-    "Explore": "deepseek-chat",
+    "Explore": "deepseek-v4-flash",
     "Plan": "gpt-4o",
     "general-purpose": "gpt-4o",
-    "frontend-dev": "deepseek-chat",
+    "frontend-dev": "deepseek-v4-flash",
     "default": "gpt-4o"
   }
 }
@@ -318,7 +350,8 @@ For larger changes, open an issue first so the scope is clear before implementat
 - `bun run build`
 - `bun run test:coverage`
 - `bun run smoke`
-- focused `bun test ...` runs for touched areas
+- focused `bun test ...` runs for files and flows you changed
+
 
 ## Disclaimer
 
