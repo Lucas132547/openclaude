@@ -100,7 +100,7 @@ test('login picker shows the third-party platform option', async () => {
   const output = await renderFrame(<ConsoleOAuthFlow onDone={() => {}} />)
 
   expect(output).toContain('Select login method:')
-  expect(output).toContain('3rd-party platform')
+  expect(output).toContain('Other Providers')
 })
 
 test('third-party provider branch opens the first-run provider manager', async () => {

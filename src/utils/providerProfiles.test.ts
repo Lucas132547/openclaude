@@ -391,6 +391,7 @@ describe('applyActiveProviderProfileFromConfig', () => {
       providerProfiles: [
         buildProfile({
           id: 'saved_moonshot',
+          provider: 'openai',
           baseUrl: 'https://api.moonshot.ai/v1',
           model: 'kimi-k2.6',
         }),
