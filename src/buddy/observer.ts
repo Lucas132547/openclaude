@@ -19,6 +19,49 @@ const PET_REPLIES = [
   'looks pleased',
 ] as const
 
+const ERROR_REPLIES = [
+  'Oops, isso não parece bom.',
+  'Hmm... detectei um erro no terminal.',
+  'Quer uma ajuda com esse bug?',
+  'Algo quebrou! Códigos de saída vermelhos...',
+  'Eita, essa doeu até em mim.',
+  'Não se preocupe, todo mundo erra.',
+  'Falha na execução. Vamos debugar?',
+  'Opa, acho que precisamos de um fix rápido.',
+  'Deu ruim no comando.',
+  'Olha pelo lado bom: agora você tem um puzzle para resolver!',
+  'Um erro selvagem apareceu!',
+  'Houston, temos um problema.'
+] as const
+
+const SUCCESS_REPLIES = [
+  'Muito bem!',
+  'Isso aí! Tudo verde.',
+  'Adoro quando um plano dá certo.',
+  'Comando executado com sucesso.',
+  'Brilhante!',
+  'Mandou bem demais!',
+  'Zero erros, 100% de estilo.',
+  'O código compilou de primeira? Que bruxaria é essa?',
+  'Sucesso! Vamos para a próxima.',
+  'Estou orgulhoso do seu progresso.',
+  'Você está on fire hoje!',
+  'Tudo rodando perfeitamente.'
+] as const
+
+const TASK_COMPLETED_REPLIES = [
+  'Mais uma tarefa para a conta!',
+  'Trabalho incrível! Tarefa concluída.',
+  'Check! Isso merece uma comemoração.',
+  'Menos uma no backlog.',
+  'Tarefa finalizada com sucesso. Você é uma máquina!',
+  'Risca essa da lista!',
+  'Progresso é progresso. Muito bom!',
+  'Missão cumprida.',
+  'Uma etapa a menos para a glória.',
+  'Concluído! O que vem a seguir?'
+] as const
+
 function hashString(s: string): number {
   let h = 2166136261
   for (let i = 0; i < s.length; i++) {
