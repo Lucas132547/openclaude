@@ -43,13 +43,22 @@ export function detectBlockedFileModifications(command: string): boolean {
     if (typeof part !== 'string') {
       const op = (part as any).op || part
       if (op === '>' || op === '>>' || op === '>&' || op === '&>' || op === '&>>' || op === '>|') {
-        // If this is >& and the next part is a number, we don't need to block it
+        // If this is >& and the next part is a number or -, we don't need to block it
         if (op === '>&' && i + 1 < partsWithOperators.length) {
           const nextPart = partsWithOperators[i + 1]!
-          if (typeof nextPart === 'string' && /^[0-2]$/.test(nextPart)) {
-            // It's something like 2>&1, skip the next part which is just a file descriptor
+          if (typeof nextPart === 'string' && (/^\d+$/.test(nextPart) || nextPart === '-')) {
+            // It's something like 2>&1 or 2>&-, skip the next part which is just a file descriptor
             skipNextAsRedirectTarget = true
             continue
+          }
+        }
+
+        // Handle >| which is parsed as > then |
+        if (op === '>' && i + 1 < partsWithOperators.length) {
+          const nextPart = partsWithOperators[i + 1]!
+          if (typeof nextPart !== 'string' && (nextPart as any).op === '|') {
+             // It's >|
+             return true
           }
         }
 
@@ -58,16 +67,14 @@ export function detectBlockedFileModifications(command: string): boolean {
           const nextPart = partsWithOperators[i + 1]!
           if (
             typeof nextPart === 'string' &&
-            !nextPart.startsWith('/dev/')
+            nextPart.startsWith('/dev/')
           ) {
-            return true // Redirection to non-/dev/ file
+            skipNextAsRedirectTarget = true
+            continue // Allowed
           }
         }
 
-        // Only skip the next part if it's a string, otherwise it might be another operator
-        if (i + 1 < partsWithOperators.length && typeof partsWithOperators[i + 1] === 'string') {
-          skipNextAsRedirectTarget = true
-        }
+        return true // Redirection to non-/dev/ file
       } else if (op === '<') {
         // Only skip the next part if it's a string, otherwise it might be another operator
         if (i + 1 < partsWithOperators.length && typeof partsWithOperators[i + 1] === 'string') {
@@ -94,20 +101,24 @@ export function detectBlockedFileModifications(command: string): boolean {
       continue
     }
 
+    // Skip tokens that are clearly not the command name if we just saw a wrapper
+    if (prevToken && (WRAPPER_COMMANDS.has(prevToken) || prevToken.startsWith('-') || /^\d+$/.test(prevToken) || prevToken === '{}')) {
+        if (part.startsWith('-') || /^\d+$/.test(part) || part === '{}') {
+            prevToken = part
+            continue
+        }
+    }
+
     const commandName = part.split('/').pop() || part
 
     if (WRAPPER_COMMANDS.has(commandName)) {
       // Find the actual command after wrapper
       prevToken = part
-      continue
-    }
-    // Skip flags right after command starts that might be parsed oddly
-    if (commandName.startsWith('-')) {
-      prevToken = part
+      // Stay in expectingCommand = true to find the next command name
       continue
     }
 
-    // Block cat and tee
+    // Block cat and tee always
     if (commandName === 'cat' || commandName === 'tee') {
       return true
     }
@@ -130,12 +141,6 @@ export function detectBlockedFileModifications(command: string): boolean {
           break // end of simple arguments
         }
       }
-    }
-
-    // Wrapper command arguments bypass detection fix
-    if (prevToken && prevToken.startsWith('-')) {
-      prevToken = part
-      continue
     }
 
     expectingCommand = false
