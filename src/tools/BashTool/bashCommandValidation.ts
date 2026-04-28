@@ -3,11 +3,11 @@ import { queryWithModel } from '../../services/api/claude.js'
 import { getSmallFastModel } from '../../utils/model/model.js'
 import { asSystemPrompt } from '../../utils/systemPromptType.js'
 
-const BLOCKED_EDITORS = new Set(['vi', 'vim', 'nano', 'ed'])
+const BLOCKED_EDITORS = new Set(['vi', 'vim', 'nano', 'ed', 'emacs', 'nvim'])
 const IN_PLACE_MODIFIERS = new Set(['sed', 'perl'])
 const WRAPPER_COMMANDS = new Set([
   'env', 'time', 'stdbuf', 'nohup', 'timeout', 'watch', 'xargs', 'sudo',
-  'exec', 'eval', 'command', 'builtin', 'su', 'doas'
+  'exec', 'eval', 'command', 'builtin', 'su', 'doas', 'parallel'
 ])
 
 /**
@@ -74,6 +74,13 @@ export function detectBlockedFileModifications(command: string): boolean {
           }
         }
 
+        // Check if we are in a custom file descriptor situation like 'exec 3> file'
+        // where '3' was the prevToken.
+        if (prevToken && /^\d+$/.test(prevToken)) {
+            // We just passed the FD number, and now we are at the > operator.
+            // This is still a redirection that we want to block if it goes to a file.
+        }
+
         return true // Redirection to non-/dev/ file
       } else if (op === '<') {
         // Only skip the next part if it's a string, otherwise it might be another operator
@@ -83,10 +90,16 @@ export function detectBlockedFileModifications(command: string): boolean {
       }
 
       // Control operators start a new command. Redirects just attach to current command.
-      if (op === '|' || op === '||' || op === '&&' || op === ';' || op === '&' || op === '|&' || op === '(') {
+      if (op === '|' || op === '||' || op === '&&' || op === ';' || op === '&' || op === '|&' || op === '(' || op === ')' || op === '{' || op === '}' || op === '<(' || op === '>(') {
         expectingCommand = true
       }
       prevToken = null
+      continue
+    }
+
+    if (part === '{' || part === '}') {
+      expectingCommand = true
+      prevToken = part
       continue
     }
 
@@ -103,10 +116,16 @@ export function detectBlockedFileModifications(command: string): boolean {
 
     // Skip tokens that are clearly not the command name if we just saw a wrapper
     if (prevToken && (WRAPPER_COMMANDS.has(prevToken) || prevToken.startsWith('-') || /^\d+$/.test(prevToken) || prevToken === '{}')) {
-        if (part.startsWith('-') || /^\d+$/.test(part) || part === '{}') {
-            prevToken = part
-            continue
-        }
+      // If the current token is a flag or other non-command argument, skip it.
+      // Special case: sudo -u <user>
+      if (prevToken === '-u' || prevToken === '--user') {
+        prevToken = part
+        continue
+      }
+      if (part.startsWith('-') || /^\d+$/.test(part) || part === '{}') {
+        prevToken = part
+        continue
+      }
     }
 
     const commandName = part.split('/').pop() || part
@@ -121,6 +140,31 @@ export function detectBlockedFileModifications(command: string): boolean {
     // Block cat and tee always
     if (commandName === 'cat' || commandName === 'tee') {
       return true
+    }
+
+    // Special handling for find -exec
+    if (commandName === 'find') {
+      for (let j = i + 1; j < partsWithOperators.length; j++) {
+        const findPart = partsWithOperators[j]!
+        if (typeof findPart === 'string') {
+          if (findPart === '-exec' || findPart === '-execdir') {
+            // The command to execute starts at j + 1
+            // We need to set expectingCommand = true for the next iteration to catch it,
+            // but find is a bit special. Let's just check the immediate next tokens.
+            if (j + 1 < partsWithOperators.length) {
+              const execCmd = partsWithOperators[j + 1]
+              if (typeof execCmd === 'string') {
+                const execCmdName = execCmd.split('/').pop() || execCmd
+                if (execCmdName === 'cat' || execCmdName === 'tee' || BLOCKED_EDITORS.has(execCmdName)) {
+                  return true
+                }
+              }
+            }
+          }
+        } else {
+          break // end of arguments
+        }
+      }
     }
 
     // Check for directly blocked commands
@@ -160,7 +204,7 @@ export async function isBlockedBySmartValidation(
   options: any,
 ): Promise<boolean> {
   // Only trigger on complex commands (heuristic)
-  if (command.length < 100 && !command.includes('|') && !command.includes('EOF')) {
+  if (command.length < 50 && !command.includes('|') && !command.includes('>') && !command.includes('EOF')) {
     return false
   }
 

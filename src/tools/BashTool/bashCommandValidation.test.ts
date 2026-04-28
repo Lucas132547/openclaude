@@ -13,6 +13,14 @@ describe('detectBlockedFileModifications', () => {
       'command > /tmp/test.txt',
       'echo "test" 1> file.txt',
       'echo "test" 2> error.log',
+      'echo "foo">out.txt',
+      'echo "foo">>out.txt',
+      'ls>out',
+      '(echo "inner" > inner.txt)',
+      '{ echo "grouped" ; } > grouped.txt',
+      'ls >(cat > file.txt)',
+      'exec 3> file.txt',
+      'cat <<EOF > script.sh\ncontent\nEOF',
     ]
 
     it.each(blockedCommands)('should block: %s', (cmd) => {
@@ -46,6 +54,9 @@ describe('detectBlockedFileModifications', () => {
       'nano file.txt',
       'vi file.txt',
       'ed file.txt',
+      'find . -name "*.txt" -exec cat {} +',
+      'find . -exec tee output.txt',
+      'find . -execdir vi {} \\;',
     ]
 
     it.each(blockedCommands)('should block: %s', (cmd) => {
@@ -106,6 +117,7 @@ describe('detectBlockedFileModifications', () => {
   describe('Wrapped Commands', () => {
     const blockedCommands = [
       'sudo cat file.txt',
+      'sudo -u user cat file.txt',
       'timeout 10 tee out.txt',
       'env FOO=bar cat file.txt',
       'time sed -i "s/a/b/" file.txt',
@@ -115,6 +127,10 @@ describe('detectBlockedFileModifications', () => {
     it.each(blockedCommands)('should block: %s', (cmd) => {
       expect(detectBlockedFileModifications(cmd)).toBe(true)
     })
+
+    it('should allow safe commands wrapped in sudo', () => {
+      expect(detectBlockedFileModifications('sudo -u user ls')).toBe(false)
+    })
   })
 
   describe('Complex/Piped Commands', () => {
@@ -123,6 +139,8 @@ describe('detectBlockedFileModifications', () => {
       expect(detectBlockedFileModifications('cat file.txt | grep foo')).toBe(true)
       expect(detectBlockedFileModifications('grep foo file.txt | tee log.txt')).toBe(true)
       expect(detectBlockedFileModifications('grep foo file.txt > result.txt')).toBe(true)
+      expect(detectBlockedFileModifications('ls <(cat file.txt)')).toBe(true)
+      expect(detectBlockedFileModifications('{ cat file.txt ; }')).toBe(true)
     })
 
     it('should allow complex allowed pipes', () => {
