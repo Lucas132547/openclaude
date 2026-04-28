@@ -1,5 +1,6 @@
 import type { LocalJSXCommandContext, LocalJSXCommandOnDone } from '../../types/command.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
+import { getLevelInfo } from '../../buddy/progression.js'
 import { companionUserId, getCompanion, rollWithSeed } from '../../buddy/companion.js'
 import type { StoredCompanion } from '../../buddy/types.js'
 import { COMMON_HELP_ARGS, COMMON_INFO_ARGS } from '../../constants/xml.js'
@@ -130,6 +131,17 @@ export async function call(
       `${companion.name} is your ${titleCase(companion.rarity)} ${companion.species}. ${companion.personality}`,
       { display: 'system' },
     )
+    return null
+  }
+
+  if (arg === 'status') {
+    const xp = config.companion?.xp ?? 0
+    const levelInfo = getLevelInfo(xp)
+    const mutedStatus = config.companionMuted ? 'Muted' : 'Listening'
+    onDone(`Name: ${config.companion?.name ?? 'Unknown'}
+Level: ${levelInfo.level} (${xp} XP)
+State: ${mutedStatus}
+Mood: "${levelInfo.status}"`, { display: 'system' })
     return null
   }
 
