@@ -1,7 +1,8 @@
 import type { Message } from '../types/message.js'
-import { getGlobalConfig } from '../utils/config.js'
+import { saveGlobalConfig, getGlobalConfig } from '../utils/config.js'
 import { getUserMessageText } from '../utils/messages.js'
 import { getCompanion } from './companion.js'
+import { getLevelInfo } from './progression.js'
 
 const DIRECT_REPLIES = [
   'I am observing.',
@@ -119,7 +120,31 @@ export async function fireCompanionObserver(
         if (content.type === 'tool_use' && content.name === 'TaskUpdate') {
           const input = content.input
           if (typeof input === 'object' && input !== null && 'status' in input && input.status === 'completed') {
-             onReaction(`${companion.name}: ${pickDeterministic(TASK_COMPLETED_REPLIES, Date.now().toString())}`)
+             // XP Logic
+             const config = getGlobalConfig()
+             const currentXp = config.companion?.xp ?? 0
+             const newXp = currentXp + 1
+
+             const oldInfo = getLevelInfo(currentXp)
+             const newInfo = getLevelInfo(newXp)
+
+             saveGlobalConfig(curr => {
+               if (!curr.companion) return curr
+               return {
+                 ...curr,
+                 companion: {
+                   ...curr.companion,
+                   xp: newXp,
+                   hat: newInfo.hat ?? curr.companion.hat
+                 }
+               }
+             })
+
+             if (oldInfo.level !== newInfo.level) {
+               onReaction(`${companion.name}: Uau! Subi para o Nível ${newInfo.level} e ganhei um chapéu novo!`)
+             } else {
+               onReaction(`${companion.name}: ${pickDeterministic(TASK_COMPLETED_REPLIES, Date.now().toString())}`)
+             }
              return
           }
         }

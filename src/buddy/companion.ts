@@ -127,7 +127,9 @@ export function companionUserId(): string {
 export function getCompanion(): Companion | undefined {
   const stored = getGlobalConfig().companion
   if (!stored) return undefined
-  const { bones } = roll(companionUserId())
+  // use stored seed if present, fallback to userId
+  const seedToUse = stored.seed ?? `${companionUserId()}:buddy`
+  const { bones } = rollWithSeed(seedToUse)
   // stored last so the unlocked hat overrides the bones hat
-  return { ...bones, ...stored }
+  return { ...bones, ...stored } as Companion
 }

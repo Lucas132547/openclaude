@@ -127,23 +127,103 @@ export async function call(
       })
       return null
     }
+    const xp = companion.xp ?? 0
+    const levelInfo = getLevelInfo(xp)
+    const mutedStatus = getGlobalConfig().companionMuted ? 'Muted' : 'Listening'
     onDone(
-      `${companion.name} is your ${titleCase(companion.rarity)} ${companion.species}. ${companion.personality}`,
+      `Name: ${companion.name} (${titleCase(companion.rarity)} ${companion.species})
+Level: ${levelInfo.level} (${xp} XP)
+State: ${mutedStatus}
+Personality: ${companion.personality}
+Mood: "${levelInfo.status}"`,
       { display: 'system' },
     )
     return null
   }
 
-  if (arg === 'status') {
-    const xp = config.companion?.xp ?? 0
+  // --- BEGIN NEW COMMANDS: RENAME & REROLL ---
+
+  const [baseCommand, ...restArgs] = arg.split(' ')
+
+  if (baseCommand === 'rename') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('No buddy hatched yet. Run /buddy to hatch one.', { display: 'system' })
+      return null
+    }
+
+    const newName = restArgs.join(' ')
+    if (!newName) {
+      onDone('Usage: /buddy rename <new name>\nCost: 2 XP, Requires Level 2', { display: 'system' })
+      return null
+    }
+
+    const xp = companion.xp ?? 0
     const levelInfo = getLevelInfo(xp)
-    const mutedStatus = config.companionMuted ? 'Muted' : 'Listening'
-    onDone(`Name: ${config.companion?.name ?? 'Unknown'}
-Level: ${levelInfo.level} (${xp} XP)
-State: ${mutedStatus}
-Mood: "${levelInfo.status}"`, { display: 'system' })
+
+    // 1. Check if the user meets the level requirement (Level >= 2). If not, call onDone with an error message and return null.
+    if (levelInfo.level < 2) {
+      onDone(`Your buddy needs to be at least Level 2 to be renamed. (Current: Level ${levelInfo.level})`, { display: 'system' })
+      return null
+    }
+
+    // 2. Check if the user has enough XP (xp >= 2). If not, call onDone with an error message and return null.
+    if (xp < 2) {
+      onDone(`Renaming costs 2 XP. You only have ${xp} XP.`, { display: 'system' })
+      return null
+    }
+
+    // 3. Update the global config using saveGlobalConfig
+    saveGlobalConfig(current => ({
+      ...current,
+      companion: current.companion ? {
+        ...current.companion,
+        name: titleCase(newName),
+        xp: xp - 2,
+      } : undefined,
+    }))
+
+    // 4. Set a reaction and call onDone with a success message.
+    setCompanionReaction(context, `*happy noises* I like my new name!`, true)
+    onDone(`Successfully renamed your buddy to ${titleCase(newName)}! (Cost: 2 XP)`, { display: 'system' })
     return null
   }
+
+  if (baseCommand === 'reroll') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('No buddy hatched yet. Run /buddy to hatch one.', { display: 'system' })
+      return null
+    }
+
+    const xp = companion.xp ?? 0
+
+    // 1. Check if the user has enough XP (xp >= 10). If not, call onDone with an error message and return null.
+    if (xp < 10) {
+      onDone(`Rerolling costs 10 XP. You only have ${xp} XP.`, { display: 'system' })
+      return null
+    }
+
+    // 2. Create a new random seed.
+    const newSeed = Math.random().toString(36).substring(7)
+
+    // 3. Update the global config using saveGlobalConfig
+    saveGlobalConfig(current => ({
+      ...current,
+      companion: current.companion ? {
+        ...current.companion,
+        xp: xp - 10,
+        seed: newSeed,
+      } : undefined,
+    }))
+
+    // 4. Set a reaction and call onDone with a success message.
+    setCompanionReaction(context, `*poof* I feel different!`, true)
+    onDone(`Successfully rerolled your buddy! (Cost: 10 XP). Run /buddy status to see the changes.`, { display: 'system' })
+    return null
+  }
+
+  // --- END NEW COMMANDS ---
 
   if (arg === 'mute' || arg === 'unmute') {
     const muted = arg === 'mute'
@@ -171,10 +251,12 @@ Mood: "${levelInfo.status}"`, { display: 'system' })
       companion: stored,
       companionMuted: false,
     }))
+    const bones = rollWithSeed(`${companionUserId()}:buddy`).bones
     companion = {
-      ...rollWithSeed(`${companionUserId()}:buddy`).bones,
+      ...bones,
       ...stored,
-    }
+      hat: stored.hat ?? bones.hat,
+    } as import('../../buddy/types.js').Companion
     setCompanionReaction(
       context,
       `${companion.name} the ${companion.species} has hatched.`,
