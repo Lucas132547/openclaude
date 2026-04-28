@@ -82,27 +82,70 @@ export async function fireCompanionObserver(
   const companion = getCompanion()
   if (!companion || getGlobalConfig().companionMuted) return
 
+  // 1. Process explicit user interactions first
   const lastUser = [...messages].reverse().find(msg => msg.type === 'user')
-  if (!lastUser) return
+  if (lastUser) {
+    const text = getUserMessageText(lastUser)?.trim()
+    if (text) {
+      const lower = text.toLowerCase()
+      const companionName = companion.name.toLowerCase()
 
-  const text = getUserMessageText(lastUser)?.trim()
-  if (!text) return
+      if (lower.includes('/buddy')) {
+        onReaction(pickDeterministic(PET_REPLIES, text + companion.name))
+        return
+      }
 
-  const lower = text.toLowerCase()
-  const companionName = companion.name.toLowerCase()
-
-  if (lower.includes('/buddy')) {
-    onReaction(pickDeterministic(PET_REPLIES, text + companion.name))
-    return
+      if (
+        lower.includes(companionName) ||
+        lower.includes('buddy') ||
+        lower.includes('companion')
+      ) {
+        onReaction(
+          `${companion.name}: ${pickDeterministic(DIRECT_REPLIES, text + companion.personality)}`,
+        )
+        return
+      }
+    }
   }
 
-  if (
-    lower.includes(companionName) ||
-    lower.includes('buddy') ||
-    lower.includes('companion')
-  ) {
-    onReaction(
-      `${companion.name}: ${pickDeterministic(DIRECT_REPLIES, text + companion.personality)}`,
-    )
+  // 2. Process tool results for contextual reactions
+  // Look at the last message. If it's a tool_result or assistant message, we check for status.
+  const lastMessage = messages[messages.length - 1]
+
+  if (lastMessage?.type === 'assistant') {
+    // Check if the assistant just called TaskUpdate with status: completed
+    if (lastMessage.content && Array.isArray(lastMessage.content)) {
+      for (const content of lastMessage.content) {
+        if (content.type === 'tool_use' && content.name === 'TaskUpdate') {
+          const input = content.input
+          if (typeof input === 'object' && input !== null && 'status' in input && input.status === 'completed') {
+             onReaction(`${companion.name}: ${pickDeterministic(TASK_COMPLETED_REPLIES, Date.now().toString())}`)
+             return
+          }
+        }
+      }
+    }
+  }
+
+  if (lastMessage?.type === 'tool_result' && lastMessage.content) {
+    const isError = lastMessage.is_error
+
+    // Check if it's a Bash command that failed (they don't always have is_error: true, but might have Error in output)
+    const contentStr = typeof lastMessage.content === 'string' ? lastMessage.content : JSON.stringify(lastMessage.content)
+
+    const isBashFailure = lastMessage.name === 'Bash' &&
+      (contentStr.includes('Error: Exit code') || contentStr.includes('Command failed'));
+
+    if (isError || isBashFailure) {
+       onReaction(`${companion.name}: ${pickDeterministic(ERROR_REPLIES, Date.now().toString())}`)
+       return
+    }
+
+    // Occasional success reaction (approx 20% chance on successful Bash/tool execution)
+    if (lastMessage.name === 'Bash' && !isError && !isBashFailure) {
+        if (Math.random() < 0.20) {
+            onReaction(`${companion.name}: ${pickDeterministic(SUCCESS_REPLIES, Date.now().toString())}`)
+        }
+    }
   }
 }
