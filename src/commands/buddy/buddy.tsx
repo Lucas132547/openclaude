@@ -2,7 +2,7 @@ import type { LocalJSXCommandContext, LocalJSXCommandOnDone } from '../../types/
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 import { getLevelInfo } from '../../buddy/progression.js'
 import { companionUserId, getCompanion, rollWithSeed } from '../../buddy/companion.js'
-import type { StoredCompanion } from '../../buddy/types.js'
+import type { StoredCompanion, Companion } from '../../buddy/types.js'
 import { COMMON_HELP_ARGS, COMMON_INFO_ARGS } from '../../constants/xml.js'
 
 const NAME_PREFIXES = [
@@ -256,7 +256,7 @@ Mood: "${levelInfo.status}"`,
       ...bones,
       ...stored,
       hat: stored.hat ?? bones.hat,
-    } as import('../../buddy/types.js').Companion
+    } as Companion
     setCompanionReaction(
       context,
       `${companion.name} the ${companion.species} has hatched.`,
