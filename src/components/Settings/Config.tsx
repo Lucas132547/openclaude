@@ -470,6 +470,21 @@ export function Config({
       });
     }
   }] : []), {
+    id: 'bashSecurityLevel',
+    label: 'Bash security level',
+    value: settingsData?.bashSecurityLevel || 'smart',
+    options: ['smart', 'static'],
+    type: 'enum' as const,
+    onChange(level: string) {
+      updateSettingsForSource('userSettings', {
+        bashSecurityLevel: level as 'smart' | 'static'
+      });
+      setSettingsData(prev => ({
+        ...prev,
+        bashSecurityLevel: level as 'smart' | 'static'
+      }));
+    }
+  }, {
     id: 'verbose',
     label: 'Verbose output',
     value: verbose,

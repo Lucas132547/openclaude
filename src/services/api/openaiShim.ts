@@ -1520,7 +1520,6 @@ class OpenAIShimMessages {
         message?: { role?: string; content?: unknown }
         content?: unknown
       }>,
-      params.system,
       request.resolvedModel,
     )
     const openaiMessages = convertMessages(compressedMessages, params.system, {

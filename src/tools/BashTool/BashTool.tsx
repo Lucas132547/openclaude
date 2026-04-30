@@ -44,6 +44,7 @@ import { bashToolHasPermission, commandHasAnyCd, matchWildcardPattern, permissio
 import { interpretCommandResult } from './commandSemantics.js';
 import { getDefaultTimeoutMs, getMaxTimeoutMs, getSimplePrompt } from './prompt.js';
 import { checkReadOnlyConstraints } from './readOnlyValidation.js';
+import { detectBlockedFileModifications } from './bashCommandValidation.js';
 import { parseSedEditCommand } from './sedEditParser.js';
 import { shouldUseSandbox } from './shouldUseSandbox.js';
 import { BASH_TOOL_NAME } from './toolName.js';
@@ -325,36 +326,6 @@ function isAutobackgroundingAllowed(command: string): boolean {
  * Detecta se o comando informado inclui 'cat' atuando como base do comando
  * e que deve ser bloqueado para encorajar o uso da file read tool.
  */
-export function detectBlockedCatPattern(command: string): boolean {
-  let partsWithOperators: string[];
-  try {
-    partsWithOperators = splitCommandWithOperators(command);
-  } catch {
-    return false;
-  }
-  if (partsWithOperators.length === 0) return false;
-
-  let skipNextAsRedirectTarget = false;
-  for (const part of partsWithOperators) {
-    if (skipNextAsRedirectTarget) {
-      skipNextAsRedirectTarget = false;
-      continue;
-    }
-    if (part === '>' || part === '>>' || part === '>&') {
-      skipNextAsRedirectTarget = true;
-      continue;
-    }
-    if (part === '||' || part === '&&' || part === '|' || part === ';') {
-      continue;
-    }
-    const baseCommand = part.trim().split(/\s+/)[0];
-    if (baseCommand === 'cat') {
-      return true;
-    }
-  }
-
-  return false;
-}
 
 /**
  * Detect standalone or leading `sleep N` patterns that should use Monitor
@@ -564,10 +535,10 @@ export const BashTool = buildTool({
     return `Running ${desc}`;
   },
   async validateInput(input: BashToolInput): Promise<ValidationResult> {
-    if (detectBlockedCatPattern(input.command)) {
+    if (detectBlockedFileModifications(input.command)) {
       return {
         result: false,
-        message: `Blocked: É proibido usar o comando 'cat' neste shell. Você deve usar a ferramenta de leitura oficial (FileReadTool) para ler o conteúdo de arquivos e as ferramentas de escrita para editá-los.`,
+        message: `Blocked: File modification or redirection detected. Do not use bash to edit files. Use the Read, Write, and Edit tools instead.`,
         errorCode: 43
       };
     }
