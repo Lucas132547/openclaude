@@ -29,14 +29,14 @@ graph TD
 
 ## 3. Mapa de Arquivos Modificados
 
-| Arquivo | Tipo | O que mudou |
-|--------|------|-------------|
-| `src/buddy/progression.ts` | Service | Implementação da lógica de XP e níveis. |
-| `src/buddy/reminders.ts` | Service | Implementação de rastreador de atividade e lembretes. |
+| Arquivo                        | Tipo      | O que mudou                                            |
+| ------------------------------ | --------- | ------------------------------------------------------ |
+| `src/buddy/progression.ts`     | Service   | Implementação da lógica de XP e níveis.                |
+| `src/buddy/reminders.ts`       | Service   | Implementação de rastreador de atividade e lembretes.  |
 | `src/commands/buddy/buddy.tsx` | Component | Integração com o sistema de níveis e limpeza de tipos. |
-| `docs/superpowers/plans/...` | Docs | Planos de implementação detalhados. |
-| `docs/superpowers/specs/...` | Specs | Especificações de design das novas features. |
-| `.trunk/...` | Config | Arquivos de configuração do Trunk. |
+| `docs/superpowers/plans/...`   | Docs      | Planos de implementação detalhados.                    |
+| `docs/superpowers/specs/...`   | Specs     | Especificações de design das novas features.           |
+| `.trunk/...`                   | Config    | Arquivos de configuração do Trunk.                     |
 
 ---
 
@@ -51,6 +51,7 @@ Necessidade de gamificar a experiência de uso e fornecer feedback visual sobre 
 Calcula o nível do Buddy baseado em XP e retorna o status/acessório correspondente.
 
 **Arquivos envolvidos:**
+
 - `src/buddy/progression.ts` — Lógica de cálculo.
 - `src/commands/buddy/buddy.tsx` — Consumo da lógica no comando `/buddy`.
 
@@ -63,6 +64,7 @@ Melhorar o suporte ao desenvolvedor, incentivando pausas saudáveis e oferecendo
 Monitora o tempo da sessão e o tempo desde a última atividade, disparando mensagens via Buddy.
 
 **Arquivos envolvidos:**
+
 - `src/buddy/reminders.ts` — Rastreador de tempo e inatividade.
 
 ### `docs(superpowers): adiciona especificações e planos de implementação`
@@ -71,6 +73,7 @@ Monitora o tempo da sessão e o tempo desde a última atividade, disparando mens
 Documentar a intenção arquitetural e os passos de implementação.
 
 **Arquivos envolvidos:**
+
 - `docs/superpowers/plans/*`
 - `docs/superpowers/specs/*`
 
@@ -93,8 +96,8 @@ Padronização de linting e formatação no projeto.
 
 ## 6. ❌ O Que Está Pendente
 
-- [ ] Persistência do XP no perfil do usuário — *XP atualmente é calculado em memória ou via config global.*
-- [ ] Interface visual para os lembretes — *Aguardando integração com o sistema de notificações UI.*
+- [ ] Persistência do XP no perfil do usuário — _XP atualmente é calculado em memória ou via config global._
+- [ ] Interface visual para os lembretes — _Aguardando integração com o sistema de notificações UI._
 
 ---
 
@@ -122,8 +125,8 @@ Padronização de linting e formatação no projeto.
 
 ## 10. Validações Mapeadas
 
-| Campo / Função | Regra de validação | Status |
-|---------------|-------------------|--------|
-| `getLevelInfo` | Deve retornar level 1 para 0 XP | ✅ |
-| `checkProductivityReminders` | Não deve retornar lembrete antes do tempo | ✅ |
-| `updateActivityTracker` | Deve resetar o timer de inatividade | ✅ |
+| Campo / Função               | Regra de validação                        | Status |
+| ---------------------------- | ----------------------------------------- | ------ |
+| `getLevelInfo`               | Deve retornar level 1 para 0 XP           | ✅     |
+| `checkProductivityReminders` | Não deve retornar lembrete antes do tempo | ✅     |
+| `updateActivityTracker`      | Deve resetar o timer de inatividade       | ✅     |
