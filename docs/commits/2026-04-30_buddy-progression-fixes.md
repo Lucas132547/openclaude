@@ -16,12 +16,12 @@ graph TD
 
 ## 3. Mapa de Arquivos Modificados
 
-| Arquivo | Tipo | O que mudou |
-|--------|------|-------------|
-| `src/buddy/progression.ts` | Service | Extraiu LEVEL_BRACKETS e permitiu injeção de dependência para customização. |
-| `src/buddy/reminders.ts` | Service | Removeu estados globais fixos (`Date.now()`), passando o estado e o timestamp como parâmetros, facilitando testes de unidade. |
-| `src/buddy/useBuddyNotification.tsx` | Hook | Refatorado para inicializar os temporizadores dos lembretes e expor `trackActivity()`. |
-| `src/screens/REPL.tsx` | Component | Integrado o `useBuddyNotification` e adicionado o `trackActivity()` no evento de submissão do prompt (`onSubmit`). |
+| Arquivo                              | Tipo      | O que mudou                                                                                                                   |
+| ------------------------------------ | --------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `src/buddy/progression.ts`           | Service   | Extraiu LEVEL_BRACKETS e permitiu injeção de dependência para customização.                                                   |
+| `src/buddy/reminders.ts`             | Service   | Removeu estados globais fixos (`Date.now()`), passando o estado e o timestamp como parâmetros, facilitando testes de unidade. |
+| `src/buddy/useBuddyNotification.tsx` | Hook      | Refatorado para inicializar os temporizadores dos lembretes e expor `trackActivity()`.                                        |
+| `src/screens/REPL.tsx`               | Component | Integrado o `useBuddyNotification` e adicionado o `trackActivity()` no evento de submissão do prompt (`onSubmit`).            |
 
 ---
 
@@ -39,6 +39,7 @@ A UI agora monitora de fato quando o usuário envia uma mensagem, reiniciando o 
 Foi utilizado `useRef` para armazenar o estado das notificações (`ReminderState`) dentro do hook `useBuddyNotification`, pois não precisamos que mudanças de tempo renderizem novamente os componentes, mantendo alta performance, mas mantendo a reatividade dos `setInterval`.
 
 **Arquivos envolvidos:**
+
 - `src/buddy/progression.ts`
 - `src/buddy/reminders.ts`
 - `src/buddy/useBuddyNotification.tsx`
@@ -83,7 +84,7 @@ Foi utilizado `useRef` para armazenar o estado das notificações (`ReminderStat
 
 ## 10. Validações Mapeadas
 
-| Campo / Função | Regra de validação | Status |
-|---------------|-------------------|--------|
-| `trackActivity()` | Resetar o tempo de inatividade no momento correto (onSubmit) | ✅ |
-| Lembrete inatividade | Notificar > 15m inativo | ✅ |
+| Campo / Função       | Regra de validação                                           | Status |
+| -------------------- | ------------------------------------------------------------ | ------ |
+| `trackActivity()`    | Resetar o tempo de inatividade no momento correto (onSubmit) | ✅     |
+| Lembrete inatividade | Notificar > 15m inativo                                      | ✅     |
