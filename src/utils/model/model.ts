@@ -460,8 +460,8 @@ export function firstPartyNameToCanonical(name: ModelName): ModelShortName {
   if (name.includes('gemini-3.1-pro')) {
     return 'gemini-3.1-pro'
   }
-  if (name.includes('gemini-3-flash-preview-lite')) {
-    return 'gemini-3-flash-preview-lite'
+  if (name.includes('gemini-3.1-flash-lite-preview')) {
+    return 'gemini-3.1-flash-lite-preview'
   }
   if (name.includes('gemini-3-flash-preview')) {
     return 'gemini-3-flash-preview'
@@ -489,7 +489,7 @@ export function firstPartyNameToCanonical(name: ModelName): ModelShortName {
     return 'gemini-3-flash-preview'
   }
   if (name === 'gemini-flash-lite') {
-    return 'gemini-3-flash-preview-lite'
+    return 'gemini-3.1-flash-lite-preview'
   }
 
   const match = name.match(/(claude-(\d+-\d+-)?\w+)/)
@@ -608,7 +608,7 @@ export function getPublicModelDisplayName(model: ModelName): string | null {
       'claude-haiku-4.5': 'Claude Haiku 4.5',
       'gemini-3.1-pro-preview': 'Gemini 3.1 Pro Preview',
       'gemini-3-flash-preview': 'Gemini 3 Flash',
-      'gemini-3-flash-preview-lite': 'Gemini 3 Flash-Lite',
+      'gemini-3.1-flash-lite-preview': 'Gemini 3 Flash-Lite',
       'gemini-2.5-pro': 'Gemini 2.5 Pro',
       'gemini-2.5-flash': 'Gemini 2.5 Flash',
       'gemini-2.5-flash-lite': 'Gemini 2.5 Flash-Lite',

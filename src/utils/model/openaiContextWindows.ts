@@ -201,7 +201,7 @@ const OPENAI_CONTEXT_WINDOWS: Record<string, number> = {
   'gemini-2.5-flash-lite':        1_048_576,
   'gemini-3.1-pro-preview':       1_048_576,
   'gemini-3-flash-preview':       1_048_576,
-  'gemini-3-flash-lite-preview':  1_048_576,
+  'gemini-3.1-flash-lite-preview':  1_048_576,
 
   // Ollama local models
   // Llama 3.1+ models support 128k context natively (Meta official specs).
