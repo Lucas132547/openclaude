@@ -617,7 +617,7 @@ function GeminiSetupView({
     onAuthenticated: (tokens, persistCredentials) => {
       persistCredentials()
       addProviderProfile({
-        provider: 'openai',
+        provider: 'gemini',
         name: 'Google Gemini',
         baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
         model: 'gemini-3.1-pro-preview',
@@ -638,7 +638,7 @@ function GeminiSetupView({
           onSubmit={val => {
             if (val.trim()) {
               addProviderProfile({
-                provider: 'openai',
+                provider: 'gemini',
                 name: 'Google Gemini',
                 baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
                 model: 'gemini-3.1-pro-preview',
@@ -701,7 +701,7 @@ function GeminiSetupView({
           if (val === 'back') onCancel()
           else if (val === 'adc') {
             addProviderProfile({
-              provider: 'openai',
+              provider: 'gemini',
               name: 'Google Gemini',
               baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
               model: 'gemini-3.1-pro-preview',

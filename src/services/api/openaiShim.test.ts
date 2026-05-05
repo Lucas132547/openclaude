@@ -327,14 +327,14 @@ test('strips store when providerOverride routes chat_completions to the Gemini h
   const client = createOpenAIShimClient({
     defaultHeaders: {},
     providerOverride: {
-      model: 'gemini-3.1-pro',
+      model: 'gemini-3.1-pro-preview',
       baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai',
       apiKey: 'gemini-key',
     },
   }) as OpenAIShimClient
 
   await client.beta.messages.create({
-    model: 'gemini-3.1-pro',
+    model: 'gemini-3.1-pro-preview',
     messages: [{ role: 'user', content: 'hello' }],
     max_tokens: 64,
     stream: false,
@@ -367,14 +367,14 @@ test('strips store when providerOverride routes responses API to the Gemini host
   const client = createOpenAIShimClient({
     defaultHeaders: {},
     providerOverride: {
-      model: 'gemini-3.1-pro',
+      model: 'gemini-3.1-pro-preview',
       baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai',
       apiKey: 'gemini-key',
     },
   }) as OpenAIShimClient
 
   await client.beta.messages.create({
-    model: 'gemini-3.1-pro',
+    model: 'gemini-3.1-pro-preview',
     messages: [{ role: 'user', content: 'hello' }],
     max_tokens: 64,
     stream: false,

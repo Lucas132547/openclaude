@@ -34,8 +34,11 @@ export default defineVendor({
   catalog: {
     source: 'static',
     models: [
-      { id: 'gemini-3-flash-preview', apiName: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
+      { id: 'gemini-3.1-pro-preview', apiName: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview' },
       { id: 'gemini-2.5-pro', apiName: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+      { id: 'gemini-3-flash-preview', apiName: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
+      { id: 'gemini-3.1-flash-lite-preview', apiName: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash-Lite Preview' },
+      { id: 'gemini-2.0-flash', apiName: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
     ],
   },
   usage: { supported: false },
