@@ -120,7 +120,7 @@ export function MemoryFileSelector(t0) {
       t1 = {
         label: "Open auto-memory folder",
         value: `${OPEN_FOLDER_PREFIX}${getAutoMemPath()}`,
-        description: ""
+        description: getDisplayPath(getAutoMemPath())
       };
       $[0] = t1;
     } else {
@@ -133,7 +133,7 @@ export function MemoryFileSelector(t0) {
         t2 = {
           label: "Open team memory folder",
           value: `${OPEN_FOLDER_PREFIX}${teamMemPaths.getTeamMemPath()}`,
-          description: ""
+          description: getDisplayPath(teamMemPaths.getTeamMemPath())
         };
         $[1] = t2;
       } else {
