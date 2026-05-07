@@ -17,6 +17,7 @@ import { checkStatsigFeatureGate_CACHED_MAY_BE_STALE } from '../../services/anal
 import type { AnyObject, Tool, ToolPermissionContext } from '../../Tool.js'
 import { FILE_READ_TOOL_NAME } from '../../tools/FileReadTool/prompt.js'
 import { getCwd } from '../cwd.js'
+import { isMemoryFilePath } from '../claudemd.js'
 import { getClaudeConfigHomeDir } from '../envUtils.js'
 import {
   getFsImplementation,
@@ -444,6 +445,11 @@ function isScratchpadPath(absolutePath: string): boolean {
  */
 function isDangerousFilePathToAutoEdit(path: string): boolean {
   const absolutePath = expandPath(path)
+
+  if (isMemoryFilePath(absolutePath)) {
+    return false
+  }
+
   const pathSegments = absolutePath.split(sep)
   const fileName = pathSegments.at(-1)
 

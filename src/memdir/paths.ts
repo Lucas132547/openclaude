@@ -1,4 +1,5 @@
 import memoize from 'lodash-es/memoize.js'
+import { existsSync } from 'fs'
 import { homedir } from 'os'
 import { isAbsolute, join, normalize, sep } from 'path'
 import {
@@ -226,9 +227,16 @@ export const getAutoMemPath = memoize(
     if (override) {
       return override
     }
+    
+    const autoMemBase = getAutoMemBase()
+    const localClaudeDir = join(autoMemBase, '.claude')
+    if (existsSync(localClaudeDir)) {
+      return (join(localClaudeDir, AUTO_MEM_DIRNAME) + sep).normalize('NFC')
+    }
+
     const projectsDir = join(getMemoryBaseDir(), 'projects')
     return (
-      join(projectsDir, sanitizePath(getAutoMemBase()), AUTO_MEM_DIRNAME) + sep
+      join(projectsDir, sanitizePath(autoMemBase), AUTO_MEM_DIRNAME) + sep
     ).normalize('NFC')
   },
   () => getProjectRoot(),
