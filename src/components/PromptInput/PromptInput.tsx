@@ -2014,7 +2014,8 @@ function PromptInput({
       key: 'effort-level',
       text: effortNotificationText,
       priority: 'high',
-      timeoutMs: 12_000
+      timeoutMs: 12_000,
+      fold: (_, incoming) => incoming
     });
   }, [effortNotificationText, addNotification, removeNotification]);
   useBuddyNotification();
@@ -2055,29 +2056,33 @@ function PromptInput({
   // Memoized callbacks for model picker to prevent re-renders when unrelated
   // state (like notifications) changes. This prevents the inline model picker
   // from visually "jumping" when notifications arrive.
-  const handleModelSelect = useCallback((model: string | null, _effort: EffortLevel | undefined) => {
-    let wasFastModeDisabled = false;
+  const handleModelSelect = useCallback((model: string | null, effort: EffortLevel | undefined) => {
     setAppState(prev => {
-      wasFastModeDisabled = isFastModeEnabled() && !isFastModeSupportedByModel(model) && !!prev.fastMode;
+      const isFast = model ? isFastModeSupportedByModel(model) && prev.fastMode : false;
+      const wasFastModeDisabled = isFastModeEnabled() && !isFastModeSupportedByModel(model) && !!prev.fastMode;
       return {
         ...prev,
         mainLoopModel: model,
-        mainLoopModelForSession: null,
-        // Turn off fast mode if switching to a model that doesn't support it
-        ...(wasFastModeDisabled && {
-          fastMode: false
-        })
+        mainLoopModelForSession: undefined,
+        effortValue: effort !== undefined ? toPersistableEffort(effort) : prev.effortValue,
+        fastMode: wasFastModeDisabled ? false : isFast
       };
     });
     setShowModelPicker(false);
-    const effectiveFastMode = (isFastMode ?? false) && !wasFastModeDisabled;
+
+    // Calculate message for notification
+    const effectiveFastMode = isFastMode ?? false;
+    const modelSupportedFast = isFastModeSupportedByModel(model);
+    const wasFastDisabled = isFastModeEnabled() && !modelSupportedFast && effectiveFastMode;
+
     let message = `Model set to ${modelDisplayString(model)}`;
     if (isBilledAsExtraUsage(model, effectiveFastMode, isOpus1mMergeEnabled())) {
       message += ' · Billed as extra usage';
     }
-    if (wasFastModeDisabled) {
+    if (wasFastDisabled) {
       message += ' · Fast mode OFF';
     }
+
     addNotification({
       key: 'model-switched',
       jsx: <Text>{message}</Text>,

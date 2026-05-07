@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/Gitlawb/openclaude/compare/v0.9.2...v0.9.3) (2026-05-07)
+
+
+### Bug Fixes
+
+* **effort:** sincronização do status de effort no rodapé após alteração via /effort ou /model
+
 ## [0.9.2](https://github.com/Gitlawb/openclaude/compare/v0.9.1...v0.9.2) (2026-05-06)
 
 

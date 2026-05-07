@@ -45,7 +45,14 @@ export function EffortPicker({ onSelect, onCancel }: Props) {
   const modelReasoningEffort = usesOpenAIEffort ? getReasoningEffortForModel(model) : undefined
   const options: EffortOption[] = [
     {
-      label: <EffortOptionLabel level="auto" text="Auto" isCurrent={false} />,
+      label: (
+        <EffortOptionLabel
+          level="auto"
+          text="Auto"
+          isCurrent={appStateEffort === undefined}
+          effectiveLevel={currentDisplayedLevel}
+        />
+      ),
       value: 'auto',
       description: 'Use the default effort level for your model',
       isAvailable: true,
@@ -54,7 +61,7 @@ export function EffortPicker({ onSelect, onCancel }: Props) {
       const displayLevel = usesOpenAIEffort
         ? (level === 'xhigh' ? 'max' : level)
         : level
-      const isCurrent = currentDisplayedLevel === displayLevel
+      const isCurrent = appStateEffort === level
       return {
         label: (
           <EffortOptionLabel
@@ -145,14 +152,29 @@ export function EffortPicker({ onSelect, onCancel }: Props) {
   )
 }
 
-function EffortOptionLabel({ level, text, isCurrent }: { level: EffortLevel | 'auto', text: string, isCurrent: boolean }) {
+function EffortOptionLabel({
+  level,
+  text,
+  isCurrent,
+  effectiveLevel,
+}: {
+  level: EffortLevel | 'auto',
+  text: string,
+  isCurrent: boolean,
+  effectiveLevel?: EffortLevel,
+}) {
   const symbol = level === 'auto' ? '⊘' : effortLevelToSymbol(level as EffortLevel)
   const color = isCurrent ? 'remember' : level === 'auto' ? 'subtle' : 'suggestion'
+
+  let labelText = text
+  if (level === 'auto' && effectiveLevel) {
+    labelText = `${text} (currently ${effectiveLevel})`
+  }
 
   return (
     <>
       <Text color={color}>{symbol} </Text>
-      <Text bold={isCurrent}>{text}</Text>
+      <Text bold={isCurrent}>{labelText}</Text>
       {isCurrent && <Text dimColor={true}> (current)</Text>}
     </>
   )
