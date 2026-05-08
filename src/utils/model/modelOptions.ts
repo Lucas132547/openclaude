@@ -72,6 +72,8 @@ function getScopedAdditionalModelOptions(): ModelOption[] {
 }
 
 export function getDefaultOptionForUser(fastMode = false): ModelOption {
+  const is3P = getAPIProvider() !== 'firstParty'
+
   if (process.env.USER_TYPE === 'ant') {
     const currentModel = renderDefaultModelSetting(
       getDefaultMainLoopModelSetting(),
@@ -81,6 +83,14 @@ export function getDefaultOptionForUser(fastMode = false): ModelOption {
       label: 'Default (recommended)',
       description: `Use the default model for Ants (currently ${currentModel})`,
       descriptionForModel: `Default model (currently ${currentModel})`,
+    }
+  }
+
+  if (is3P) {
+    return {
+      value: null,
+      label: 'Default (recommended)',
+      description: `Use the default model (currently ${renderDefaultModelSetting(getDefaultMainLoopModelSetting())})`,
     }
   }
 
@@ -94,7 +104,6 @@ export function getDefaultOptionForUser(fastMode = false): ModelOption {
   }
 
   // PAYG
-  const is3P = getAPIProvider() !== 'firstParty'
   return {
     value: null,
     label: 'Default (recommended)',
@@ -340,7 +349,7 @@ function getGeminiModelOptions(): ModelOption[] {
       description: 'High speed · Optimal for fast iterative development',
     },
     {
-      value: 'gemini-3-flash-preview-lite',
+      value: 'gemini-3.1-flash-lite-preview',
       label: 'Gemini 3 Flash-Lite',
       description: 'Fastest & cheapest · Built for high-volume tasks',
     },

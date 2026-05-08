@@ -198,9 +198,9 @@ export const MODEL_COSTS: Record<ModelShortName, ModelCosts> = {
     COST_TIER_5_25,
   [firstPartyNameToCanonical(CLAUDE_OPUS_4_7_CONFIG.firstParty)]:
     COST_TIER_5_25,
-  'gemini-3.1-pro': COST_GEMINI_3_1_PRO_LOW,
+  'gemini-3.1-pro-preview': COST_GEMINI_3_1_PRO_LOW,
   'gemini-3-flash-preview': COST_GEMINI_3_FLASH,
-  'gemini-3-flash-preview-lite': COST_GEMINI_3_FLASH_LITE,
+  'gemini-3.1-flash-lite-preview': COST_GEMINI_3_FLASH_LITE,
   'gemini-2.5-pro': COST_GEMINI_2_5_PRO_LOW,
   'gemini-2.5-flash': COST_GEMINI_2_5_FLASH,
   'gemini-2.0-flash': COST_GEMINI_2_0_FLASH,
@@ -234,7 +234,7 @@ export function getModelCosts(model: string, usage: Usage): ModelCosts {
   }
 
   // Handle Gemini Pro context-dependent pricing
-  if (shortName === 'gemini-3.1-pro') {
+  if (shortName === 'gemini-3.1-pro-preview') {
     const totalInput = usage.input_tokens + (usage.cache_read_input_tokens ?? 0)
     return totalInput > 200_000 ? COST_GEMINI_3_1_PRO_HIGH : COST_GEMINI_3_1_PRO_LOW
   }

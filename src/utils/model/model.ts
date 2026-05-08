@@ -28,6 +28,7 @@ import { LIGHTNING_BOLT } from '../../constants/figures.js'
 import { isModelAllowed } from './modelAllowlist.js'
 import { type ModelAlias, isModelAlias } from './aliases.js'
 import { capitalize } from '../stringUtils.js'
+import { DEFAULT_GEMINI_MODEL } from '../providerProfile.js'
 
 export type ModelShortName = string
 export type ModelName = string
@@ -41,10 +42,9 @@ function normalizeModelSetting(value: unknown): ModelName | ModelAlias | undefin
 
 export function getSmallFastModel(): ModelName {
   if (process.env.ANTHROPIC_SMALL_FAST_MODEL) return process.env.ANTHROPIC_SMALL_FAST_MODEL
-
-  // For Gemini provider mode (where it's the primary provider)
+  // For Gemini provider, use a fast model
   if (getAPIProvider() === 'gemini') {
-    return process.env.GEMINI_MODEL || process.env.OPENAI_MODEL || 'gemini-3-flash-preview'
+    return process.env.GEMINI_MODEL || 'gemini-2.0-flash-lite'
   }
   if (getAPIProvider() === 'mistral') {
     return process.env.MISTRAL_MODEL || 'ministral-3b-latest'
@@ -175,7 +175,7 @@ export function getDefaultOpusModel(): ModelName {
   }
   // Gemini provider
   if (getAPIProvider() === 'gemini') {
-    return process.env.GEMINI_MODEL || process.env.OPENAI_MODEL || 'gemini-3.1-pro-preview'
+    return process.env.GEMINI_MODEL || 'gemini-2.5-pro'
   }
   // Mistral provider
   if (getAPIProvider() === 'mistral') {
@@ -221,7 +221,7 @@ export function getDefaultSonnetModel(): ModelName {
   }
   // Gemini provider
   if (getAPIProvider() === 'gemini') {
-    return process.env.GEMINI_MODEL || process.env.OPENAI_MODEL || 'gemini-2.5-pro'
+    return process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL
   }
   // Mistral provider
   if (getAPIProvider() === 'mistral') {
@@ -281,7 +281,7 @@ export function getDefaultHaikuModel(): ModelName {
   }
   // Gemini provider
   if (getAPIProvider() === 'gemini') {
-    return process.env.GEMINI_MODEL || process.env.OPENAI_MODEL || 'gemini-3-flash-preview'
+    return process.env.GEMINI_MODEL || 'gemini-2.0-flash-lite'
   }
   // NVIDIA NIM
   if (getAPIProvider() === 'nvidia-nim') {
@@ -350,7 +350,7 @@ export function getDefaultMainLoopModelSetting(): ModelName | ModelAlias {
   }
   // Gemini provider: always use the configured Gemini model
   if (getAPIProvider() === 'gemini') {
-    return process.env.GEMINI_MODEL || process.env.OPENAI_MODEL || 'gemini-3.1-pro-preview'
+    return process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL
   }
   if (getAPIProvider() === 'mistral') {
     return process.env.MISTRAL_MODEL || 'devstral-latest'
@@ -366,6 +366,10 @@ export function getDefaultMainLoopModelSetting(): ModelName | ModelAlias {
   // xAI provider: always use the configured Grok model (default grok-4)
   if (getAPIProvider() === 'xai') {
     return process.env.OPENAI_MODEL || 'grok-4'
+  }
+  // MiniMax provider: always use the configured MiniMax model
+  if (getAPIProvider() === 'minimax') {
+    return process.env.OPENAI_MODEL || 'MiniMax-M2.7'
   }
 
   // Ants default to defaultModel from flag config, or Opus 1M if not configured
@@ -456,42 +460,6 @@ export function firstPartyNameToCanonical(name: ModelName): ModelShortName {
   if (name.includes('claude-3-haiku')) {
     return 'claude-3-haiku'
   }
-
-  if (name.includes('gemini-3.1-pro')) {
-    return 'gemini-3.1-pro'
-  }
-  if (name.includes('gemini-3-flash-preview-lite')) {
-    return 'gemini-3-flash-preview-lite'
-  }
-  if (name.includes('gemini-3-flash-preview')) {
-    return 'gemini-3-flash-preview'
-  }
-  if (name.includes('gemini-2.5-pro')) {
-    return 'gemini-2.5-pro'
-  }
-  if (name.includes('gemini-2.5-flash-lite')) {
-    return 'gemini-2.5-flash-lite'
-  }
-  if (name.includes('gemini-2.5-flash')) {
-    return 'gemini-2.5-flash'
-  }
-  if (name.includes('gemini-2.0-flash-lite')) {
-    return 'gemini-2.0-flash-lite'
-  }
-  if (name.includes('gemini-2.0-flash')) {
-    return 'gemini-2.0-flash'
-  }
-
-  if (name === 'gemini-pro') {
-    return 'gemini-3.1-pro'
-  }
-  if (name === 'gemini-flash') {
-    return 'gemini-3-flash-preview'
-  }
-  if (name === 'gemini-flash-lite') {
-    return 'gemini-3-flash-preview-lite'
-  }
-
   const match = name.match(/(claude-(\d+-\d+-)?\w+)/)
   if (match && match[1]) {
     return match[1]
@@ -585,8 +553,18 @@ export function renderModelSetting(setting: ModelName | ModelAlias): string {
  * if the model is not recognized as a public model.
  */
 export function getPublicModelDisplayName(model: ModelName): string | null {
-  // For OpenAI/Gemini/Codex/GitHub providers, show the actual model name not a Claude alias
-  if (getAPIProvider() === 'openai' || getAPIProvider() === 'gemini' || getAPIProvider() === 'codex' || getAPIProvider() === 'github' || getAPIProvider() === 'xai') {
+  // For OpenAI-compatible/non-Anthropic providers, show the actual model name
+  // instead of interpreting provider-specific defaults as Claude aliases.
+  if (
+    getAPIProvider() === 'openai' ||
+    getAPIProvider() === 'gemini' ||
+    getAPIProvider() === 'codex' ||
+    getAPIProvider() === 'github' ||
+    getAPIProvider() === 'xai' ||
+    getAPIProvider() === 'minimax' ||
+    getAPIProvider() === 'nvidia-nim' ||
+    getAPIProvider() === 'mistral'
+  ) {
     // Return display names for known GitHub Copilot models
     const copilotModelNames: Record<string, string> = {
       'gpt-5.5': 'GPT-5.5',
@@ -608,10 +586,7 @@ export function getPublicModelDisplayName(model: ModelName): string | null {
       'claude-haiku-4.5': 'Claude Haiku 4.5',
       'gemini-3.1-pro-preview': 'Gemini 3.1 Pro Preview',
       'gemini-3-flash-preview': 'Gemini 3 Flash',
-      'gemini-3-flash-preview-lite': 'Gemini 3 Flash-Lite',
       'gemini-2.5-pro': 'Gemini 2.5 Pro',
-      'gemini-2.5-flash': 'Gemini 2.5 Flash',
-      'gemini-2.5-flash-lite': 'Gemini 2.5 Flash-Lite',
       'grok-code-fast-1': 'Grok Code Fast 1',
     }
     if (copilotModelNames[model]) {
@@ -852,6 +827,9 @@ export function isLegacyModelRemapEnabled(): boolean {
 
 export function modelDisplayString(model: ModelSetting): string {
   if (model === null) {
+    if (getAPIProvider() !== 'firstParty') {
+      return `Default (${getDefaultMainLoopModel()})`
+    }
     if (process.env.USER_TYPE === 'ant') {
       return `Default for Ants (${renderDefaultModelSetting(getDefaultMainLoopModelSetting())})`
     } else if (isClaudeAISubscriber()) {

@@ -8,8 +8,10 @@ import {
   getDisplayedEffortLevel,
   getEffortLevelDescription,
   getEffortLevelLabel,
+  isOpenAIEffortLevel,
   modelSupportsEffort,
   modelUsesOpenAIEffort,
+  openAIEffortToStandard,
 } from '../utils/effort.js'
 import { getAPIProvider } from '../utils/model/providers.js'
 import { getReasoningEffortForModel } from '../services/api/providerConfig.js'
@@ -43,7 +45,14 @@ export function EffortPicker({ onSelect, onCancel }: Props) {
   const modelReasoningEffort = usesOpenAIEffort ? getReasoningEffortForModel(model) : undefined
   const options: EffortOption[] = [
     {
-      label: <EffortOptionLabel level="auto" text="Auto" isCurrent={false} />,
+      label: (
+        <EffortOptionLabel
+          level="auto"
+          text="Auto"
+          isCurrent={appStateEffort === undefined}
+          effectiveLevel={currentDisplayedLevel}
+        />
+      ),
       value: 'auto',
       description: 'Use the default effort level for your model',
       isAvailable: true,
@@ -52,7 +61,7 @@ export function EffortPicker({ onSelect, onCancel }: Props) {
       const displayLevel = usesOpenAIEffort
         ? (level === 'xhigh' ? 'max' : level)
         : level
-      const isCurrent = currentDisplayedLevel === displayLevel
+      const isCurrent = appStateEffort === level
       return {
         label: (
           <EffortOptionLabel
@@ -76,7 +85,12 @@ export function EffortPicker({ onSelect, onCancel }: Props) {
       }))
       onSelect(undefined)
     } else {
-      const effortLevel = value as EffortLevel
+      // Normalize OpenAI-shaped 'xhigh' to the standard EffortLevel ('max')
+      // so AppState + settings.json always hold a persistable value. The shim
+      // converts back to 'xhigh' at the request boundary.
+      const effortLevel = isOpenAIEffortLevel(value)
+        ? openAIEffortToStandard(value)
+        : (value as EffortLevel)
       setAppState(prev => ({
         ...prev,
         effortValue: effortLevel,
@@ -90,10 +104,15 @@ export function EffortPicker({ onSelect, onCancel }: Props) {
   }
 
   const supportsEffort = modelSupportsEffort(model)
-  // For OpenAI/Codex, use the model's default reasoning effort as initial focus
-  // For Claude, use the displayed effort level or 'auto'
+  // For OpenAI/Codex: prefer the user's current selection (max → xhigh for
+  // option matching), otherwise the model's alias default, otherwise auto.
+  // For Claude: user's current selection or auto.
   const initialFocus = usesOpenAIEffort
-    ? (modelReasoningEffort || 'auto')
+    ? (appStateEffort === 'max'
+        ? 'xhigh'
+        : appStateEffort
+          ? String(appStateEffort)
+          : (modelReasoningEffort || 'auto'))
     : (appStateEffort ? String(appStateEffort) : 'auto')
 
   return (
@@ -133,14 +152,29 @@ export function EffortPicker({ onSelect, onCancel }: Props) {
   )
 }
 
-function EffortOptionLabel({ level, text, isCurrent }: { level: EffortLevel | 'auto', text: string, isCurrent: boolean }) {
+function EffortOptionLabel({
+  level,
+  text,
+  isCurrent,
+  effectiveLevel,
+}: {
+  level: EffortLevel | 'auto',
+  text: string,
+  isCurrent: boolean,
+  effectiveLevel?: EffortLevel,
+}) {
   const symbol = level === 'auto' ? '⊘' : effortLevelToSymbol(level as EffortLevel)
   const color = isCurrent ? 'remember' : level === 'auto' ? 'subtle' : 'suggestion'
+
+  let labelText = text
+  if (level === 'auto' && effectiveLevel) {
+    labelText = `${text} (currently ${effectiveLevel})`
+  }
 
   return (
     <>
       <Text color={color}>{symbol} </Text>
-      <Text bold={isCurrent}>{text}</Text>
+      <Text bold={isCurrent}>{labelText}</Text>
       {isCurrent && <Text dimColor={true}> (current)</Text>}
     </>
   )
