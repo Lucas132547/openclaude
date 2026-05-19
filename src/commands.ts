@@ -63,6 +63,7 @@ import bughunter from './commands/bughunter/index.js'
 import terminalSetup from './commands/terminalSetup/index.js'
 import usage from './commands/usage/index.js'
 import theme from './commands/theme/index.js'
+import logo from './commands/logo/index.js'
 import vim from './commands/vim/index.js'
 import { feature } from 'bun:bundle'
 import { isBuddyEnabled } from './buddy/feature.js'
@@ -218,6 +219,7 @@ import { getSettingSourceName } from './utils/settings/constants.js'
 import {
   type Command,
   getCommandName,
+  isCommand,
   isCommandEnabled,
 } from './types/command.js'
 
@@ -326,6 +328,7 @@ const COMMANDS = memoize((): Command[] => [
   stickers,
   tag,
   theme,
+  logo,
   feedback,
   review,
   ultrareview,
@@ -366,7 +369,7 @@ const COMMANDS = memoize((): Command[] => [
   ...(process.env.USER_TYPE === 'ant' && !process.env.IS_DEMO
     ? INTERNAL_ONLY_COMMANDS
     : []),
-])
+].filter(isCommand))
 
 export const builtInCommandNames = memoize(
   (): Set<string> =>
@@ -645,6 +648,7 @@ export const REMOTE_SAFE_COMMANDS: Set<Command> = new Set([
   clear, // Clear screen
   help, // Show help
   theme, // Change terminal theme
+  logo, // Change startup logo color scheme
   color, // Change agent color
   vim, // Toggle vim mode
   cost, // Show session cost (local cost tracking)
