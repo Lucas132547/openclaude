@@ -5687,3 +5687,60 @@ test('emits reasoning_effort from codex alias default when no override is passed
 
   expect(requestBody?.reasoning_effort).toBe('high')
 })
+
+test('clamps reasoning_effort to low/medium/high for Gemini models', async () => {
+  process.env.OPENAI_BASE_URL = 'https://api.openai.com/v1'
+  process.env.OPENAI_API_KEY = 'test-key'
+
+  let requestBody: Record<string, unknown> | undefined
+
+  globalThis.fetch = (async (_input, init) => {
+    requestBody = JSON.parse(String(init?.body))
+    return new Response(
+      JSON.stringify({
+        id: 'chatcmpl-1',
+        model: 'google/gemini-2.0-flash-thinking-exp',
+        choices: [
+          {
+            message: { role: 'assistant', content: 'ok' },
+            finish_reason: 'stop',
+          },
+        ],
+        usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+      }),
+      { headers: { 'Content-Type': 'application/json' } },
+    )
+  }) as FetchType
+
+  // Test 'max' => 'high'
+  const clientMax = createOpenAIShimClient({ reasoningEffort: 'max' }) as OpenAIShimClient
+  await clientMax.beta.messages.create({
+    model: 'google/gemini-2.0-flash-thinking-exp',
+    messages: [{ role: 'user', content: 'hi' }],
+    max_tokens: 16,
+    stream: false,
+  })
+  expect(requestBody?.reasoning_effort).toBe('high')
+
+  // Test 'xhigh' => 'high'
+  const clientXHigh = createOpenAIShimClient({ reasoningEffort: 'xhigh' }) as OpenAIShimClient
+  await clientXHigh.beta.messages.create({
+    model: 'google/gemini-2.0-flash-thinking-exp',
+    messages: [{ role: 'user', content: 'hi' }],
+    max_tokens: 16,
+    stream: false,
+  })
+  expect(requestBody?.reasoning_effort).toBe('high')
+
+  // Test 'medium' => 'medium'
+  const clientMedium = createOpenAIShimClient({ reasoningEffort: 'medium' }) as OpenAIShimClient
+  await clientMedium.beta.messages.create({
+    model: 'google/gemini-2.0-flash-thinking-exp',
+    messages: [{ role: 'user', content: 'hi' }],
+    max_tokens: 16,
+    stream: false,
+  })
+  expect(requestBody?.reasoning_effort).toBe('medium')
+})
+
+

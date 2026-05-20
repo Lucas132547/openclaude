@@ -1,5 +1,6 @@
 import { feature } from 'bun:bundle'
 import { getAPIProvider } from './model/providers.js'
+import { resolveProviderRequest } from '../services/api/providerConfig.js'
 import type { BetaUsage as Usage } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type {
   ContentBlock,
@@ -92,6 +93,20 @@ type HookAttachmentWithName = Exclude<
   HookAttachment,
   HookPermissionDecisionAttachment
 >
+
+function isGeminiLike(): boolean {
+  if (getAPIProvider() === 'gemini') return true
+  try {
+    const request = resolveProviderRequest()
+    const model = request.resolvedModel?.toLowerCase() || ''
+    if (model.includes('gemini')) return true
+    const baseUrl = request.baseUrl?.toLowerCase() || ''
+    if (baseUrl.includes('generativelanguage.googleapis.com')) return true
+  } catch {
+    // Ignore errors during bootstrapping
+  }
+  return false
+}
 
 import type { APIError } from '@anthropic-ai/sdk'
 import type {
@@ -1767,7 +1782,8 @@ export function stripCallerFieldFromAssistantMessage(
           id: block.id,
           name: block.name,
           input: block.input,
-          ...(getAPIProvider() === 'gemini' && (block as any).extra_content ? { extra_content: (block as any).extra_content } : {})
+          ...(isGeminiLike() && (block as any).extra_content ? { extra_content: (block as any).extra_content } : {}),
+          ...(isGeminiLike() && (block as any).signature ? { signature: (block as any).signature } : {})
         }
       }),
     },
@@ -2224,24 +2240,26 @@ export function normalizeMessagesForAPI(
 
                   // When tool search is enabled, preserve all fields including 'caller'
                   if (toolSearchEnabled) {
-                    const { extra_content, ...restBlock } = block as any
+                    const { extra_content, signature: blockSignature, ...restBlock } = block as any
                     return {
                       ...restBlock,
                       name: canonicalName,
                       input: normalizedInput,
-                      ...(getAPIProvider() === 'gemini' && extra_content ? { extra_content } : {})
+                      ...(isGeminiLike() && extra_content ? { extra_content } : {}),
+                      ...(isGeminiLike() && blockSignature ? { signature: blockSignature } : {})
                     }
                   }
 
                   // When tool search is NOT enabled, explicitly construct tool_use
                   // block with only standard API fields to avoid sending fields like
                   // 'caller' that may be stored in sessions from tool search runs
-                    return {
+                  return {
                     type: 'tool_use' as const,
                     id: block.id,
                     name: canonicalName,
                     input: normalizedInput,
-                    ...(getAPIProvider() === 'gemini' && (block as any).extra_content ? { extra_content: (block as any).extra_content } : {})
+                    ...(isGeminiLike() && (block as any).extra_content ? { extra_content: (block as any).extra_content } : {}),
+                    ...(isGeminiLike() && (block as any).signature ? { signature: (block as any).signature } : {})
                   }
                 }
                 return block

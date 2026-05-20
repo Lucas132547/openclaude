@@ -161,6 +161,13 @@ function shouldPreserveGeminiThoughtSignature(
   return isGeminiMode() || hasGeminiApiHost(baseUrl) || isGeminiModelName(model)
 }
 
+function normalizeGeminiReasoningEffort(
+  effort: string
+): 'low' | 'medium' | 'high' {
+  if (effort === 'max' || effort === 'xhigh') return 'high'
+  return effort as 'low' | 'medium' | 'high'
+}
+
 function geminiThoughtSignatureFromExtraContent(
   extraContent: unknown,
 ): string | undefined {
@@ -617,6 +624,7 @@ function convertMessages(
         }
 
         if (toolUses.length > 0) {
+          let hasAttachedSignature = false
           const mappedToolCalls = toolUses
             .map(
               (tu: {
@@ -657,18 +665,25 @@ function convertMessages(
 
                 // Gemini OpenAI-compatible endpoints require Google's
                 // thought_signature to be replayed with prior function-call
-                // parts. Preserve only real signatures received from the
-                // provider; synthetic placeholders are rejected by GMI.
-                if (preserveGeminiThoughtSignature) {
+                // parts. For parallel function calls, Gemini spec requires the
+                // signature only on the FIRST FC; subsequent parallel FCs must
+                // not receive a signature. We rely on each tu.extra_content /
+                // tu.signature having been populated correctly from the stream:
+                // the first FC gets the signature, subsequent ones don't.
+                // If no real signature exists (e.g. old sessions), use the
+                // Gemini-approved dummy 'skip_thought_signature_validator' to
+                // pass validation without a real signature.
+                if (preserveGeminiThoughtSignature && !hasAttachedSignature) {
                   const signature =
                     tu.signature ??
                     geminiThoughtSignatureFromExtraContent(tu.extra_content) ??
-                    (thinkingBlock as { signature?: string } | undefined)?.signature
+                    'skip_thought_signature_validator'
 
                   toolCall.extra_content = mergeGeminiThoughtSignature(
                     toolCall.extra_content,
                     signature,
                   )
+                  hasAttachedSignature = true
                 }
 
                 return toolCall
@@ -1800,7 +1815,11 @@ class OpenAIShimMessages {
      // or `?reasoning=<level>` query on the model string). OpenAI, Codex, and
      // most OpenAI-compatible endpoints read it from this top-level field.
     if (request.reasoning) {
-      body.reasoning_effort = request.reasoning.effort
+      if (shouldPreserveGeminiThoughtSignature(request.resolvedModel, request.baseUrl)) {
+        body.reasoning_effort = normalizeGeminiReasoningEffort(request.reasoning.effort)
+      } else {
+        body.reasoning_effort = request.reasoning.effort
+      }
     }
     // Convert max_tokens to max_completion_tokens for OpenAI API compatibility.
     // Azure OpenAI requires max_completion_tokens and does not accept max_tokens.
