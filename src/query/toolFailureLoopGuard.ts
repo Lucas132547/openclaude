@@ -2,6 +2,8 @@ import type { ToolUseBlock } from '@anthropic-ai/sdk/resources/index.mjs'
 
 import type { AttachmentMessage, UserMessage } from '../types/message.js'
 
+import { getGlobalConfig } from '../utils/config.js'
+
 const DEFAULT_TOOL_FAILURE_LOOP_THRESHOLD = 3
 const MAX_FALLBACK_CATEGORY_LENGTH = 120
 
@@ -32,21 +34,35 @@ export function createToolFailureLoopGuardState(): ToolFailureLoopGuardState {
 }
 
 export function getToolFailureLoopThreshold(
-  value = process.env.CLAUDE_CODE_TOOL_FAILURE_LOOP_THRESHOLD,
+  value?: string,
 ): number {
-  if (value === undefined) {
-    return DEFAULT_TOOL_FAILURE_LOOP_THRESHOLD
+  if (value !== undefined) {
+    const trimmed = value.trim()
+    if (/^\d+$/.test(trimmed)) {
+      const parsed = Number(trimmed)
+      if (Number.isSafeInteger(parsed)) {
+        return parsed
+      }
+    }
   }
 
-  const trimmed = value.trim()
-  if (!/^\d+$/.test(trimmed)) {
-    return DEFAULT_TOOL_FAILURE_LOOP_THRESHOLD
+  const envValue = process.env.CLAUDE_CODE_TOOL_FAILURE_LOOP_THRESHOLD
+  if (envValue !== undefined) {
+    const trimmed = envValue.trim()
+    if (/^\d+$/.test(trimmed)) {
+      const parsed = Number(trimmed)
+      if (Number.isSafeInteger(parsed)) {
+        return parsed
+      }
+    }
   }
 
-  const parsed = Number(trimmed)
-  return Number.isSafeInteger(parsed)
-    ? parsed
-    : DEFAULT_TOOL_FAILURE_LOOP_THRESHOLD
+  const configThreshold = getGlobalConfig().toolFailureLoopThreshold
+  if (configThreshold !== undefined && Number.isSafeInteger(configThreshold) && configThreshold >= 0) {
+    return configThreshold
+  }
+
+  return DEFAULT_TOOL_FAILURE_LOOP_THRESHOLD
 }
 
 export function updateToolFailureLoopGuard(params: {
@@ -250,7 +266,8 @@ function isIgnoredSyntheticToolResult(content: string): boolean {
       "the user doesn't want to take this action right now",
     ) ||
     withoutErrorPrefix === 'streaming fallback - tool execution discarded' ||
-    withoutErrorPrefix.startsWith('cancelled: parallel tool call')
+    withoutErrorPrefix.startsWith('cancelled: parallel tool call') ||
+    withoutErrorPrefix.startsWith('blocked:')
   )
 }
 

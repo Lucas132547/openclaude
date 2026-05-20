@@ -859,6 +859,30 @@ export function Config({
       });
     }
   }, {
+    id: 'toolFailureLoopThreshold',
+    label: 'Tool failure loop threshold',
+    value: globalConfig.toolFailureLoopThreshold?.toString() ?? '3',
+    options: ['0 (disabled)', '1', '2', '3 (default)', '4', '5', '10'],
+    type: 'enum' as const,
+    onChange(val: string) {
+      const parsed = parseInt(val, 10);
+      const threshold = isNaN(parsed) ? undefined : parsed;
+      saveGlobalConfig(current => {
+        if (current.toolFailureLoopThreshold === threshold) return current;
+        return {
+          ...current,
+          toolFailureLoopThreshold: threshold
+        };
+      });
+      setGlobalConfig({
+        ...getGlobalConfig(),
+        toolFailureLoopThreshold: threshold
+      });
+      logEvent('tengu_tool_failure_loop_threshold_changed', {
+        threshold
+      });
+    }
+  }, {
     id: 'prStatusFooterEnabled',
     label: 'Show PR status footer',
     value: globalConfig.prStatusFooterEnabled ?? true,

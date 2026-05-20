@@ -1,15 +1,15 @@
 import type { ZodError } from 'zod/v4'
-import { AbortError, ShellError } from './errors.js'
+import { AbortError, isShellError } from './errors.js'
 import { INTERRUPT_MESSAGE_FOR_TOOL_USE } from './messages.js'
 
 export function formatError(error: unknown): string {
   if (error instanceof AbortError) {
     return error.message || INTERRUPT_MESSAGE_FOR_TOOL_USE
   }
-  if (!(error instanceof Error)) {
+  if (!(error instanceof Error) && !isShellError(error)) {
     return String(error)
   }
-  const parts = getErrorParts(error)
+  const parts = getErrorParts(error as Error)
   const fullMessage =
     parts.filter(Boolean).join('\n').trim() || 'Command failed with no output'
   // 40KB limit — enough for most command error logs (systemctl, apt, python, etc.)
@@ -24,7 +24,7 @@ export function formatError(error: unknown): string {
 }
 
 export function getErrorParts(error: Error): string[] {
-  if (error instanceof ShellError) {
+  if (isShellError(error)) {
     return [
       `Exit code ${error.code}`,
       error.interrupted ? INTERRUPT_MESSAGE_FOR_TOOL_USE : '',
@@ -102,7 +102,7 @@ export function formatZodValidationError(
   let errorContent = error.message
 
   // Build a human-readable error message
-  const errorParts = []
+  const errorParts: string[] = []
 
   if (missingParams.length > 0) {
     const missingParamErrors = missingParams.map(
