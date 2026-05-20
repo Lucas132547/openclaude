@@ -305,7 +305,19 @@ class ShellCommandImpl implements ShellCommand {
       this.#status = 'completed'
     }
 
-    const stdout = await this.taskOutput.getStdout()
+    let stdout = await this.taskOutput.getStdout()
+
+    // Workaround for OS file flush race condition and stream event delays:
+    // If a command fails but we read 0 bytes, the shell might have just exited
+    // and the output file or pipe isn't fully flushed/emitted yet. Wait a bit.
+    if (code !== 0 && stdout === '') {
+      for (let i = 0; i < 10; i++) {
+        await new Promise(r => setTimeout(r, 10)) // Wait up to 100ms total
+        stdout = await this.taskOutput.getStdout()
+        if (stdout !== '') break
+      }
+    }
+
     const result: ExecResult = {
       code,
       stdout,
