@@ -571,6 +571,9 @@ export type GlobalConfig = {
   // PR status footer configuration (feature-flagged via GrowthBook)
   prStatusFooterEnabled?: boolean // Show PR review status in footer (default: true)
 
+  // Tool failure loop guard configuration
+  toolFailureLoopThreshold?: number // Number of times a tool can fail before blocking (default: 3, 0 disables)
+
   // Tmux live panel visibility (internal-only, toggled via Enter on tmux pill)
   tungstenPanelVisible?: boolean
 
@@ -733,6 +736,7 @@ export const GLOBAL_CONFIG_KEYS = [
   'flickerFreeMode',
   'permissionExplainerEnabled',
   'prStatusFooterEnabled',
+  'toolFailureLoopThreshold',
   'remoteControlAtStartup',
   'remoteDialogSeen',
   'knowledgeGraphEnabled',
