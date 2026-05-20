@@ -80,6 +80,22 @@ describe('formatError', () => {
     expect(result).toContain('stdout content')
   })
 
+  test('ShellError-like object (lost class identity): combines exit code + stderr + stdout', () => {
+    // Simulating loss of class identity across module boundaries or minification
+    const err = {
+      name: 'ShellError',
+      message: 'Shell command failed',
+      stdout: 'stdout content',
+      stderr: 'stderr content',
+      code: 1,
+      interrupted: false,
+    }
+    const result = formatError(err as any)
+    expect(result).toContain('Exit code 1')
+    expect(result).toContain('stderr content')
+    expect(result).toContain('stdout content')
+  })
+
   test('ShellError: empty output falls back to default message', () => {
     const err = new ShellError('', '', 1, false)
     const result = formatError(err)

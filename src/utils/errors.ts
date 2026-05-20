@@ -33,6 +33,20 @@ export function isAbortError(e: unknown): boolean {
 }
 
 /**
+ * True iff `e` is a ShellError. Checks both instanceof and .name to handle
+ * lost class identity across module boundaries or minification.
+ */
+export function isShellError(e: unknown): e is ShellError {
+  return (
+    e instanceof ShellError ||
+    (typeof e === 'object' &&
+      e !== null &&
+      'name' in e &&
+      e.name === 'ShellError')
+  )
+}
+
+/**
  * Custom error class for configuration file parsing errors
  * Includes the file path and the default configuration that should be used
  */

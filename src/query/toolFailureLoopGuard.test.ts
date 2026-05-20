@@ -169,6 +169,7 @@ test('user aborts, user rejections, and streaming fallback discards are ignored'
     "The user doesn't want to take this action right now",
     'Streaming fallback - tool execution discarded',
     'Cancelled: parallel tool call abc was skipped',
+    'blocked: command "cat" is not allowed',
   ]
 
   for (const [index, message] of ignoredMessages.entries()) {

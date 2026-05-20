@@ -250,7 +250,8 @@ function isIgnoredSyntheticToolResult(content: string): boolean {
       "the user doesn't want to take this action right now",
     ) ||
     withoutErrorPrefix === 'streaming fallback - tool execution discarded' ||
-    withoutErrorPrefix.startsWith('cancelled: parallel tool call')
+    withoutErrorPrefix.startsWith('cancelled: parallel tool call') ||
+    withoutErrorPrefix.startsWith('blocked:')
   )
 }
 
