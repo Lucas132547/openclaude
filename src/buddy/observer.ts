@@ -64,6 +64,20 @@ const TASK_COMPLETED_REPLIES = [
   'Done! What\'s next?',
 ] as const
 
+function incrementStat(stat: 'totalBashes' | 'totalTasks' | 'totalErrors') {
+  saveGlobalConfig(curr => ({
+    ...curr,
+    companionStats: {
+      totalBashes: curr.companionStats?.totalBashes ?? 0,
+      totalTasks: curr.companionStats?.totalTasks ?? 0,
+      totalErrors: curr.companionStats?.totalErrors ?? 0,
+      totalPets: curr.companionStats?.totalPets ?? 0,
+      daysActive: curr.companionStats?.daysActive ?? 0,
+      [stat]: (curr.companionStats?.[stat] ?? 0) + 1,
+    },
+  }))
+}
+
 function grantXp(companionName: string, amount: number): number | null {
   let newLevel: number | null = null
 
@@ -137,6 +151,7 @@ export async function fireCompanionObserver(
           const input = content.input
           if (typeof input === 'object' && input !== null && 'status' in input && input.status === 'completed') {
              // XP Logic — Task completed: +3 XP
+             incrementStat('totalTasks')
              const levelUp = grantXp(companion.name, 3)
              if (levelUp) {
                onReaction(`${companion.name}: Wow! I leveled up to Level ${levelUp} and got a new hat!`)
@@ -160,6 +175,7 @@ export async function fireCompanionObserver(
       (contentStr.includes('Error: Exit code') || contentStr.includes('Command failed'));
 
     if (isError || isBashFailure) {
+       incrementStat('totalErrors')
        onReaction(`${companion.name}: ${ERROR_REPLIES[Math.floor(Date.now() / 1000) % ERROR_REPLIES.length]!}`)
        return
     }
@@ -167,6 +183,7 @@ export async function fireCompanionObserver(
     // Occasional success reaction (approx 20% chance on successful Bash/tool execution)
     if (lastMessage.name === 'Bash' && !isError && !isBashFailure) {
         // Bash success: +0.1 XP
+        incrementStat('totalBashes')
         grantXp(companion.name, 0.1)
 
         if (Date.now() % 5 === 0) {

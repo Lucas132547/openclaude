@@ -128,6 +128,35 @@ Mood: ${mood.emoji} "${mood.text}"`,
     return null
   }
 
+  if (arg === 'stats') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
+      return null
+    }
+
+    const config = getGlobalConfig()
+    const stats = config.companionStats ?? { totalBashes: 0, totalTasks: 0, totalErrors: 0, totalPets: 0, daysActive: 0 }
+    const xp = companion.xp ?? 0
+    const levelInfo = getLevelInfo(xp)
+    const streak = config.companionStreakCount ?? 0
+
+    onDone(
+      `📊 Estatísticas do ${companion.name}\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `Level: ${levelInfo.level} (${xp} XP)\n` +
+      `Streak: ${streak} dias\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `Comandos executados: ${stats.totalBashes}\n` +
+      `Tasks concluídas: ${stats.totalTasks}\n` +
+      `Erros encontrados: ${stats.totalErrors}\n` +
+      `Pets recebidos: ${stats.totalPets}\n` +
+      `Dias ativos: ${stats.daysActive}`,
+      { display: 'system' },
+    )
+    return null
+  }
+
   // --- BEGIN NEW COMMANDS: RENAME & REROLL ---
 
   const [baseCommand, ...restArgs] = arg.split(' ')
@@ -250,6 +279,18 @@ Mood: ${mood.emoji} "${mood.text}"`,
     )
     return null
   }
+
+  // Increment pet count
+  saveGlobalConfig(current => ({
+    ...current,
+    companionStats: {
+      totalBashes: current.companionStats?.totalBashes ?? 0,
+      totalTasks: current.companionStats?.totalTasks ?? 0,
+      totalErrors: current.companionStats?.totalErrors ?? 0,
+      totalPets: (current.companionStats?.totalPets ?? 0) + 1,
+      daysActive: current.companionStats?.daysActive ?? 0,
+    },
+  }))
 
   const reaction = `${companion.name} ${pickDeterministic(
     PET_REACTIONS,
