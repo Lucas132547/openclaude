@@ -86,7 +86,7 @@ function setCompanionReaction(
 
 function showHelp(onDone: LocalJSXCommandOnDone): void {
   onDone(
-    'Usage: /buddy [status|mute|unmute|rename|reroll|brincar|alimentar|stats|outfits|equipar|resumo|lembrar|memorias|help]\n\nRun /buddy with no args to hatch your companion the first time, then pet it on later runs.\n\nXP Sources:\n  Bash success: +0.1 XP\n  Daily pet: +1 XP (first /buddy of the day)\n  Task completed: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n\nCommands:\n  /buddy rename <name> — Cost: 5 XP, Requires Level 2\n  /buddy reroll — Cost: 15 XP\n  /buddy brincar — Brinque com seu buddy (cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)\n  /buddy outfits — Veja os outfits disponíveis\n  /buddy equipar <nome> — Equipe um outfit',
+    'Usage: /buddy [status|mute|unmute|rename|reroll|brincar|alimentar|stats|outfits|equipar|resumo|lembrar|memorias|help]\n\nRun /buddy with no args to hatch your companion the first time, then pet it on later runs.\n\nXP Sources:\n  Bash success: +0.1 XP\n  Daily pet: +1 XP (first /buddy of the day)\n  Task completed: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n\nCommands:\n  /buddy rename <name> — Cost: 5 XP, Requires Level 2\n  /buddy reroll — Cost: 15 XP\n  /buddy brincar — Brinque com seu buddy (cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)\n  /buddy outfits — Veja os outfits disponíveis\n  /buddy equipar <nome> — Equipe um outfit\n  /buddy lembrar <min> <texto> — Define um lembrete\n  /buddy memorias — Veja as memórias do seu buddy',
     { display: 'system' },
   )
 }
@@ -168,6 +168,62 @@ Mood: ${mood.emoji} "${mood.text}"`,
       return null
     }
     onDone(summary, { display: 'system' })
+    return null
+  }
+
+  if (arg.startsWith('lembrar ')) {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
+      return null
+    }
+
+    const lembrarArgs = arg.slice('lembrar '.length)
+    const parts = lembrarArgs.match(/^(\d+)\s+(.+)$/)
+    if (!parts) {
+      onDone('Uso: /buddy lembrar <minutos> <texto>\nExemplo: /buddy lembrar 10 revisar PR', { display: 'system' })
+      return null
+    }
+
+    const minutes = parseInt(parts[1]!)
+    const text = parts[2]!.trim()
+
+    if (minutes < 1 || minutes > 1440) {
+      onDone('O tempo deve ser entre 1 e 1440 minutos (24 horas).', { display: 'system' })
+      return null
+    }
+
+    if (!text) {
+      onDone('Preciso de um texto para o lembrete.', { display: 'system' })
+      return null
+    }
+
+    addReminder(minutes, text)
+    onDone(`${companion.name}: Beleza! Vou te lembrar em ${minutes} minuto${minutes > 1 ? 's' : ''}: "${text}"`, { display: 'system' })
+    return null
+  }
+
+  if (arg === 'memorias') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
+      return null
+    }
+
+    const memories = getMemories()
+    if (memories.length === 0) {
+      onDone(`${companion.name} ainda não tem memórias.`, { display: 'system' })
+      return null
+    }
+
+    const list = memories
+      .map(m => {
+        const date = new Date(m.timestamp).toLocaleDateString('pt-BR')
+        return `  • ${m.text} (${date})`
+      })
+      .join('\n')
+
+    onDone(`🧠 Memórias do ${companion.name}:\n${list}`, { display: 'system' })
     return null
   }
 
@@ -488,6 +544,8 @@ Mood: ${mood.emoji} "${mood.text}"`,
       companion: current.companion ? { ...current.companion, xp: newXp } : undefined,
     }))
   }
+  if (streakResult.streak === 7) addMemory('streak7')
+  if (streakResult.streak === 30) addMemory('streak30')
 
   // Easter egg: 0.5% chance de bônus especial
   if (Math.random() < 0.005) {
@@ -497,6 +555,7 @@ Mood: ${mood.emoji} "${mood.text}"`,
       ...current,
       companion: current.companion ? { ...current.companion, xp: newXp } : undefined,
     }))
+    addMemory('easterEgg')
     onDone(`✨ ${companion.name} encontrou um bug brilhante escondido! +5 XP bônus!`, { display: 'system' })
     return null
   }

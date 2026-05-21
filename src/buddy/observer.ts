@@ -6,6 +6,7 @@ import { getCompanion } from './companion.js'
 import { pickDeterministic } from './hash.js'
 import { getLevelInfo } from './progression.js'
 import { getErrorTip } from './skills.js'
+import { addMemory } from './memory.js'
 
 const DIRECT_REPLIES = [
   'I am observing.',
@@ -155,6 +156,8 @@ export async function fireCompanionObserver(
              // XP Logic — Task completed: +3 XP
              incrementStat('totalTasks')
              const levelUp = grantXp(companion.name, 3)
+             const taskStats = getGlobalConfig().companionStats
+             if (taskStats && taskStats.totalTasks === 50) addMemory('tasks50')
              if (levelUp) {
                onReaction(`${companion.name}: Wow! I leveled up to Level ${levelUp} and got a new hat!`)
              } else {
@@ -192,6 +195,8 @@ export async function fireCompanionObserver(
         // Bash success: +0.1 XP
         incrementStat('totalBashes')
         grantXp(companion.name, 0.1)
+        const bashStats = getGlobalConfig().companionStats
+        if (bashStats && bashStats.totalBashes === 100) addMemory('bashes100')
 
         if (Date.now() % 5 === 0) {
             onReaction(`${companion.name}: ${SUCCESS_REPLIES[Math.floor(Date.now() / 1000) % SUCCESS_REPLIES.length]!}`)

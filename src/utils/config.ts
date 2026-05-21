@@ -315,6 +315,7 @@ export type GlobalConfig = {
     daysActive: number
   }
   companionLastAction?: Record<string, number>
+  companionReminders?: Array<{ text: string; at: number; createdAt: number }>
   companionMemory?: Array<{ text: string; timestamp: number; trigger: string }>
   companionOutfits?: string[]
   companionActiveOutfit?: string
