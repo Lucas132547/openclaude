@@ -4,6 +4,8 @@ import { getLevelInfo } from '../../buddy/progression.js'
 import { companionUserId, getCompanion, rollWithSeed } from '../../buddy/companion.js'
 import type { StoredCompanion, Companion } from '../../buddy/types.js'
 import { pickDeterministic } from '../../buddy/hash.js'
+import { processStreak } from '../../buddy/streak.js'
+import { getMood } from '../../buddy/mood.js'
 import { COMMON_HELP_ARGS, COMMON_INFO_ARGS } from '../../constants/xml.js'
 
 const NAME_PREFIXES = [
@@ -209,6 +211,9 @@ Mood: "${levelInfo.status}"`,
     }))
     if (muted) {
       setCompanionReaction(context, undefined)
+    } else {
+      const companion = getCompanion()
+      setCompanionReaction(context, `${companion?.name ?? 'Buddy'}: I'm back!`, true)
     }
     onDone(`Buddy ${muted ? 'muted' : 'unmuted'}.`, { display: 'system' })
     return null
@@ -271,12 +276,36 @@ Mood: "${levelInfo.status}"`,
     }))
 
     if (oldInfo.level !== newInfo.level) {
-      onDone(`${reaction}\n${companion.name}: Uau! Subi para o Nível ${newInfo.level} e ganhei um chapéu novo!`, { display: 'system' })
+      onDone(`${reaction}\n${companion.name}: Wow! I leveled up to Level ${newInfo.level} and got a new hat!`, { display: 'system' })
       return null
     }
   }
 
-  setCompanionReaction(context, reaction, true)
+  // Streak diário
+  const streakResult = processStreak()
+  if (streakResult.bonusXp > 0) {
+    const xp = getGlobalConfig().companion?.xp ?? 0
+    const newXp = Math.round((xp + streakResult.bonusXp) * 10) / 10
+    saveGlobalConfig(current => ({
+      ...current,
+      companion: current.companion ? { ...current.companion, xp: newXp } : undefined,
+    }))
+  }
+
+  // Easter egg: 0.5% chance de bônus especial
+  if (Math.random() < 0.005) {
+    const xp = getGlobalConfig().companion?.xp ?? 0
+    const newXp = Math.round((xp + 5) * 10) / 10
+    saveGlobalConfig(current => ({
+      ...current,
+      companion: current.companion ? { ...current.companion, xp: newXp } : undefined,
+    }))
+    onDone(`✨ ${companion.name} encontrou um bug brilhante escondido! +5 XP bônus!`, { display: 'system' })
+    return null
+  }
+
+  const streakMsg = streakResult.message ? `\n${streakResult.message}` : ''
+  setCompanionReaction(context, reaction + streakMsg, true)
   onDone(undefined, { display: 'skip' })
   return null
 }
