@@ -39,19 +39,19 @@ const NAME_SUFFIXES = [
 ] as const
 
 const PERSONALITIES = [
-  'Curious and quietly encouraging',
-  'A patient little watcher with strong debugging instincts',
-  'Playful, observant, and suspicious of flaky tests',
-  'Calm under pressure and fond of clean diffs',
-  'A tiny terminal gremlin who likes successful builds',
+  'Curioso e encorajador silenciosamente',
+  'Um pequeno observador paciente com fortes instintos de debug',
+  'Brincalhão, observador, e desconfiado de testes instáveis',
+  'Calmo sob pressão e fã de diffs limpos',
+  'Um pequeno gremlin de terminal que adora builds bem-sucedidos',
 ] as const
 
 const PET_REACTIONS = [
-  'leans into the headpat',
-  'does a proud little bounce',
-  'emits a content beep',
-  'looks delighted',
-  'wiggles happily',
+  'se encosta no cafuné',
+  'faz um pulinho orgulhoso',
+  'emite um beep satisfeito',
+  'parece encantado',
+  'balança feliz',
 ] as const
 
 function titleCase(s: string): string {
@@ -86,7 +86,7 @@ function setCompanionReaction(
 
 function showHelp(onDone: LocalJSXCommandOnDone): void {
   onDone(
-    'Usage: /buddy [status|mute|unmute|rename|reroll|brincar|alimentar|stats|outfits|equipar|resumo|lembrar|memorias|help]\n\nRun /buddy with no args to hatch your companion the first time, then pet it on later runs.\n\nXP Sources:\n  Bash success: +0.1 XP\n  Daily pet: +1 XP (first /buddy of the day)\n  Task completed: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n\nCommands:\n  /buddy rename <name> — Cost: 5 XP, Requires Level 2\n  /buddy reroll — Cost: 15 XP\n  /buddy brincar — Brinque com seu buddy (cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)\n  /buddy outfits — Veja os outfits disponíveis\n  /buddy equipar <nome> — Equipe um outfit\n  /buddy lembrar <min> <texto> — Define um lembrete\n  /buddy memorias — Veja as memórias do seu buddy',
+    'Uso: /buddy [status|mute|unmute|rename|reroll|brincar|alimentar|stats|outfits|equipar|resumo|lembrar|memorias|help]\n\nExecute /buddy sem argumentos para chocar seu companion na primeira vez, depois acaricie nas próximas.\n\nFontes de XP:\n  Bash com sucesso: +0.1 XP\n  Pet diário: +1 XP (primeiro /buddy do dia)\n  Task concluída: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n\nComandos:\n  /buddy rename <nome> — Custo: 5 XP, Requer Level 2\n  /buddy reroll — Custo: 15 XP\n  /buddy brincar — Brinque com seu buddy (cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)\n  /buddy outfits — Veja os outfits disponíveis\n  /buddy equipar <nome> — Equipe um outfit\n  /buddy lembrar <min> <texto> — Define um lembrete\n  /buddy memorias — Veja as memórias do seu buddy',
     { display: 'system' },
   )
 }
@@ -118,15 +118,15 @@ export async function call(
     }
     const xp = companion.xp ?? 0
     const levelInfo = getLevelInfo(xp)
-    const mutedStatus = getGlobalConfig().companionMuted ? 'Muted' : 'Listening'
+    const mutedStatus = getGlobalConfig().companionMuted ? 'Silenciado' : 'Ouvindo'
     const xpDisplay = xp % 1 === 0 ? xp.toString() : xp.toFixed(1)
     const mood = getMood()
     onDone(
-      `Name: ${companion.name} (${titleCase(companion.rarity)} ${companion.species})
-Level: ${levelInfo.level} (${xpDisplay} XP)
-State: ${mutedStatus}
-Personality: ${companion.personality}
-Mood: ${mood.emoji} "${mood.text}"`,
+      `Nome: ${companion.name} (${titleCase(companion.rarity)} ${companion.species})
+Nível: ${levelInfo.level} (${xpDisplay} XP)
+Estado: ${mutedStatus}
+Personalidade: ${companion.personality}
+Humor: ${mood.emoji} "${mood.text}"`,
       { display: 'system' },
     )
     return null
@@ -234,13 +234,13 @@ Mood: ${mood.emoji} "${mood.text}"`,
   if (baseCommand === 'rename') {
     const companion = getCompanion()
     if (!companion) {
-      onDone('No buddy hatched yet. Run /buddy to hatch one.', { display: 'system' })
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
       return null
     }
 
     const newName = restArgs.join(' ').trim()
     if (!newName || newName.length > 30) {
-      onDone('Usage: /buddy rename <new name>\nName must be between 1 and 30 characters.\nCost: 5 XP, Requires Level 2', { display: 'system' })
+      onDone('Uso: /buddy rename <novo nome>\nO nome deve ter entre 1 e 30 caracteres.\nCusto: 5 XP, Requer Level 2', { display: 'system' })
       return null
     }
 
@@ -248,12 +248,12 @@ Mood: ${mood.emoji} "${mood.text}"`,
     const levelInfo = getLevelInfo(xp)
 
     if (levelInfo.level < 2) {
-      onDone(`Your buddy needs to be at least Level 2 to be renamed. (Current: Level ${levelInfo.level})`, { display: 'system' })
+      onDone(`Seu buddy precisa estar pelo menos no Level 2 para ser renomeado. (Atual: Level ${levelInfo.level})`, { display: 'system' })
       return null
     }
 
     if (xp < 5) {
-      onDone(`Renaming costs 5 XP. You only have ${xp} XP.`, { display: 'system' })
+      onDone(`Renomear custa 5 XP. Você só tem ${xp} XP.`, { display: 'system' })
       return null
     }
 
@@ -267,22 +267,22 @@ Mood: ${mood.emoji} "${mood.text}"`,
     }))
 
     addMemory('rename', titleCase(newName))
-    setCompanionReaction(context, `*happy noises* I like my new name!`, true)
-    onDone(`Successfully renamed your buddy to ${titleCase(newName)}! (Cost: 5 XP)`, { display: 'system' })
+    setCompanionReaction(context, `*sons felizes* Gostei do meu novo nome!`, true)
+    onDone(`Buddy renomeado para ${titleCase(newName)} com sucesso! (Custo: 5 XP)`, { display: 'system' })
     return null
   }
 
   if (baseCommand === 'reroll') {
     const companion = getCompanion()
     if (!companion) {
-      onDone('No buddy hatched yet. Run /buddy to hatch one.', { display: 'system' })
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
       return null
     }
 
     const xp = companion.xp ?? 0
 
     if (xp < 15) {
-      onDone(`Rerolling costs 15 XP. You only have ${xp} XP.`, { display: 'system' })
+      onDone(`Rerrolar custa 15 XP. Você só tem ${xp} XP.`, { display: 'system' })
       return null
     }
 
@@ -298,8 +298,8 @@ Mood: ${mood.emoji} "${mood.text}"`,
     }))
 
     addMemory('reroll')
-    setCompanionReaction(context, `*poof* I feel different!`, true)
-    onDone(`Successfully rerolled your buddy! (Cost: 15 XP). Run /buddy status to see the changes.`, { display: 'system' })
+    setCompanionReaction(context, `*puf* Me sinto diferente!`, true)
+    onDone(`Buddy rerrolado com sucesso! (Custo: 15 XP). Execute /buddy status para ver as mudanças.`, { display: 'system' })
     return null
   }
 
@@ -454,9 +454,9 @@ Mood: ${mood.emoji} "${mood.text}"`,
       setCompanionReaction(context, undefined)
     } else {
       const companion = getCompanion()
-      setCompanionReaction(context, `${companion?.name ?? 'Buddy'}: I'm back!`, true)
+      setCompanionReaction(context, `${companion?.name ?? 'Buddy'}: Voltei!`, true)
     }
-    onDone(`Buddy ${muted ? 'muted' : 'unmuted'}.`, { display: 'system' })
+    onDone(`Buddy ${muted ? 'silenciado' : 'reativado'}.`, { display: 'system' })
     return null
   }
 
@@ -481,11 +481,11 @@ Mood: ${mood.emoji} "${mood.text}"`,
     } as Companion
     setCompanionReaction(
       context,
-      `${companion.name} the ${companion.species} has hatched.`,
+      `${companion.name}, o ${companion.species}, chocou!`,
       true,
     )
     onDone(
-      `${companion.name} the ${companion.species} is now your buddy. Run /buddy again to pet them.`,
+      `${companion.name}, o ${companion.species}, agora é seu buddy! Execute /buddy novamente para acariciá-lo.`,
       { display: 'system' },
     )
     return null
@@ -529,7 +529,7 @@ Mood: ${mood.emoji} "${mood.text}"`,
     }))
 
     if (oldInfo.level !== newInfo.level) {
-      onDone(`${reaction}\n${companion.name}: Wow! I leveled up to Level ${newInfo.level} and got a new hat!`, { display: 'system' })
+      onDone(`${reaction}\n${companion.name}: Uau! Subi para o Nível ${newInfo.level} e ganhei um chapéu novo!`, { display: 'system' })
       return null
     }
   }

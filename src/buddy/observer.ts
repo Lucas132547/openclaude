@@ -9,62 +9,62 @@ import { getErrorTip } from './skills.js'
 import { addMemory } from './memory.js'
 
 const DIRECT_REPLIES = [
-  'I am observing.',
-  'I am helping from the corner.',
-  'I saw that.',
-  'Still here.',
-  'Watching closely.',
+  'Estou observando.',
+  'Estou ajudando daqui do canto.',
+  'Eu vi isso.',
+  'Aqui ainda.',
+  'Observando de perto.',
 ] as const
 
 const PET_REPLIES = [
-  'happy chirp',
-  'tiny victory dance',
-  'quietly approves',
-  'wiggles with joy',
-  'looks pleased',
+  'piu feliz',
+  'dancinha de vitória',
+  'aprove silenciosamente',
+  'balança de alegria',
+  'parece satisfeito',
 ] as const
 
 const ERROR_REPLIES = [
-  'Oops, that doesn\'t look good.',
-  'Hmm... detected an error in the terminal.',
-  'Want a hand with that bug?',
-  'Something broke! Red exit codes ahead...',
-  'Ouch, that one hurt even me.',
-  'Don\'t worry, everyone makes mistakes.',
-  'Execution failed. Let\'s debug?',
-  'Looks like we need a quick fix.',
-  'That command didn\'t go well.',
-  'Look on the bright side: now you have a puzzle to solve!',
-  'A wild error appeared!',
-  'Houston, we have a problem.',
+  'Ops, isso não parece bom.',
+  'Hmm... detectei um erro no terminal.',
+  'Quer ajuda com esse bug?',
+  'Algo quebrou! Códigos de saída vermelhos à vista...',
+  'Essa doeu até em mim.',
+  'Não se preocupa, todo mundo erra.',
+  'Execução falhou. Vamos debugar?',
+  'Parece que precisamos de um fix rápido.',
+  'Esse comando não foi bem.',
+  'Pelo lado bom: agora você tem um quebra-cabeça pra resolver!',
+  'Um erro selvagem apareceu!',
+  'Houston, temos um problema.',
 ] as const
 
 const SUCCESS_REPLIES = [
-  'Nice one!',
-  'All green, looking good.',
-  'Love it when a plan comes together.',
-  'Command executed successfully.',
-  'Brilliant!',
-  'Well done!',
-  'Zero errors, 100% style.',
-  'Code compiled on the first try? What sorcery is this?',
-  'Success! On to the next one.',
-  'I\'m proud of your progress.',
-  'You\'re on fire today!',
-  'Everything running perfectly.',
+  'Muito bem!',
+  'Tudo verde, ficou bom.',
+  'Adoro quando um plano dá certo.',
+  'Comando executado com sucesso.',
+  'Brilhante!',
+  'Mandou bem!',
+  'Zero erros, 100% estilo.',
+  'Compilou de primeira? Que feitiçaria é essa?',
+  'Sucesso! Pro próximo.',
+  'Tô orgulhoso do seu progresso.',
+  'Você tá em chamas hoje!',
+  'Tudo rodando perfeitamente.',
 ] as const
 
 const TASK_COMPLETED_REPLIES = [
-  'One more task for the books!',
-  'Incredible work! Task completed.',
-  'Check! That deserves a celebration.',
-  'One less in the backlog.',
-  'Task finished successfully. You\'re a machine!',
-  'Cross that one off the list!',
-  'Progress is progress. Well done!',
-  'Mission accomplished.',
-  'One step closer to glory.',
-  'Done! What\'s next?',
+  'Mais uma tarefa para a conta!',
+  'Trabalho incrível! Task concluída.',
+  'Check! Isso merece uma comemoração.',
+  'Uma a menos no backlog.',
+  'Tarefa finalizada com sucesso. Você é uma máquina!',
+  'Risca essa da lista!',
+  'Progresso é progresso. Muito bom!',
+  'Missão cumprida.',
+  'Uma etapa a menos para a glória.',
+  'Concluído! O que vem a seguir?',
 ] as const
 
 function incrementStat(stat: 'totalBashes' | 'totalTasks' | 'totalErrors') {
@@ -159,7 +159,7 @@ export async function fireCompanionObserver(
              const taskStats = getGlobalConfig().companionStats
              if (taskStats && taskStats.totalTasks === 50) addMemory('tasks50')
              if (levelUp) {
-               onReaction(`${companion.name}: Wow! I leveled up to Level ${levelUp} and got a new hat!`)
+               onReaction(`${companion.name}: Uau! Subi para o Nível ${levelUp} e ganhei um chapéu novo!`)
              } else {
                onReaction(`${companion.name}: ${TASK_COMPLETED_REPLIES[Math.floor(Date.now() / 1000) % TASK_COMPLETED_REPLIES.length]!}`)
              }

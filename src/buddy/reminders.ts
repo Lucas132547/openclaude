@@ -42,10 +42,10 @@ export function checkProductivityReminders(
     state.hasTriggeredSessionReminder = true
 
     const sessionMessages = [
-      "Wow, one full hour already! Don't forget to blink and hydrate! 💧",
-      "Time flies when you're coding! You've been at it for an hour. Maybe stretch those legs? 🏃‍♂️",
-      "Hey! 1 hour milestone reached! Let's take a quick break to rest those eyes. 👀",
-      "You're on fire! 🔥 But even machines need a cool-down. It's been an hour!",
+      "Uau, já faz uma hora inteira! Não esquece de piscar e se hidratar! 💧",
+      "O tempo voa quando você tá codando! Já faz uma hora. Que tal esticar as pernas? 🏃‍♂️",
+      "Ei! Marca de 1 hora atingida! Vamos fazer uma pausa rápida pra descansar os olhos. 👀",
+      "Você tá em chamas! 🔥 Mas até máquinas precisam de uma pausa. Já faz uma hora!",
     ]
     return sessionMessages[Math.floor(Math.random() * sessionMessages.length)]!
   }
@@ -55,10 +55,10 @@ export function checkProductivityReminders(
     state.hasTriggeredIdleReminder = true
 
     const idleMessages = [
-      "Everything okay? I've been waiting for 15 minutes. Need help debugging? 🐛",
-      "Are we stuck, or just taking a well-deserved coffee break? ☕",
-      "If you're staring at a weird bug, maybe I can help you solve it! 🕵️",
-      "Still there? Sometimes a quick walk is all it takes to find the solution! 🚶‍♀️",
+      "Tudo bem? Tô esperando faz 15 minutos. Precisa de ajuda com debug? 🐛",
+      "A gente tá travado, ou só fazendo uma pausa merecida pra um café? ☕",
+      "Se você tá encarando um bug estranho, talvez eu possa te ajudar a resolver! 🕵️",
+      "Ainda aí? As vezes uma caminhada rápida é tudo que precisa pra achar a solução! 🚶‍♀️",
     ]
     return idleMessages[Math.floor(Math.random() * idleMessages.length)]!
   }
