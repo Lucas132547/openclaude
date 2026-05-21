@@ -7,6 +7,9 @@ import { pickDeterministic } from '../../buddy/hash.js'
 import { processStreak } from '../../buddy/streak.js'
 import { getMood } from '../../buddy/mood.js'
 import { getSessionSummary } from '../../buddy/skills.js'
+import { addReminder } from '../../buddy/reminders.js'
+import { OUTFITS, getUnlockedOutfits, getActiveOutfit, equipOutfit, checkAndUnlockOutfits } from '../../buddy/outfits.js'
+import { addMemory, getMemories } from '../../buddy/memory.js'
 import { COMMON_HELP_ARGS, COMMON_INFO_ARGS } from '../../constants/xml.js'
 
 const NAME_PREFIXES = [
@@ -83,7 +86,7 @@ function setCompanionReaction(
 
 function showHelp(onDone: LocalJSXCommandOnDone): void {
   onDone(
-    'Usage: /buddy [status|mute|unmute|rename|reroll|brincar|alimentar|stats|help]\n\nRun /buddy with no args to hatch your companion the first time, then pet it on later runs.\n\nXP Sources:\n  Bash success: +0.1 XP\n  Daily pet: +1 XP (first /buddy of the day)\n  Task completed: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n\nCommands:\n  /buddy rename <name> — Cost: 5 XP, Requires Level 2\n  /buddy reroll — Cost: 15 XP\n  /buddy brincar — Brinque com seu buddy (cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)',
+    'Usage: /buddy [status|mute|unmute|rename|reroll|brincar|alimentar|stats|outfits|equipar|resumo|lembrar|memorias|help]\n\nRun /buddy with no args to hatch your companion the first time, then pet it on later runs.\n\nXP Sources:\n  Bash success: +0.1 XP\n  Daily pet: +1 XP (first /buddy of the day)\n  Task completed: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n\nCommands:\n  /buddy rename <name> — Cost: 5 XP, Requires Level 2\n  /buddy reroll — Cost: 15 XP\n  /buddy brincar — Brinque com seu buddy (cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)\n  /buddy outfits — Veja os outfits disponíveis\n  /buddy equipar <nome> — Equipe um outfit',
     { display: 'system' },
   )
 }
@@ -207,6 +210,7 @@ Mood: ${mood.emoji} "${mood.text}"`,
       } : undefined,
     }))
 
+    addMemory('rename', titleCase(newName))
     setCompanionReaction(context, `*happy noises* I like my new name!`, true)
     onDone(`Successfully renamed your buddy to ${titleCase(newName)}! (Cost: 5 XP)`, { display: 'system' })
     return null
@@ -237,6 +241,7 @@ Mood: ${mood.emoji} "${mood.text}"`,
       } : undefined,
     }))
 
+    addMemory('reroll')
     setCompanionReaction(context, `*poof* I feel different!`, true)
     onDone(`Successfully rerolled your buddy! (Cost: 15 XP). Run /buddy status to see the changes.`, { display: 'system' })
     return null
@@ -330,6 +335,56 @@ Mood: ${mood.emoji} "${mood.text}"`,
 
     setCompanionReaction(context, reaction, true)
     onDone(undefined, { display: 'skip' })
+    return null
+  }
+
+  if (arg === 'outfits') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
+      return null
+    }
+
+    const unlocked = getUnlockedOutfits()
+    const active = getActiveOutfit()
+
+    const list = OUTFITS.map(o => {
+      const isUnlocked = unlocked.includes(o.id)
+      const isActive = active === o.id
+      const status = isActive ? ' ✅ (equipado)' : isUnlocked ? ' 🔓' : ' 🔒'
+      return `  ${status} ${o.name} — ${o.description}${!isUnlocked ? `\n      Requisito: ${o.requirement}` : ''}`
+    }).join('\n')
+
+    onDone(`🎨 Outfits do ${companion.name}:\n${list}`, { display: 'system' })
+    return null
+  }
+
+  if (baseCommand === 'equipar') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
+      return null
+    }
+
+    const outfitName = restArgs.join(' ').trim().toLowerCase()
+    if (!outfitName) {
+      onDone('Uso: /buddy equipar <nome do outfit>\nVeja os outfits disponíveis com /buddy outfits', { display: 'system' })
+      return null
+    }
+
+    const outfit = OUTFITS.find(o => o.name.toLowerCase() === outfitName || o.id === outfitName)
+    if (!outfit) {
+      onDone(`Outfit "${outfitName}" não encontrado. Use /buddy outfits para ver os disponíveis.`, { display: 'system' })
+      return null
+    }
+
+    if (!equipOutfit(outfit.id)) {
+      onDone(`${outfit.name} ainda não foi desbloqueado! Requisito: ${outfit.requirement}`, { display: 'system' })
+      return null
+    }
+
+    setCompanionReaction(context, `${companion.name}: Uau! Estou usando o outfit ${outfit.name}!`, true)
+    onDone(`Outfit ${outfit.name} equipado!`, { display: 'system' })
     return null
   }
 
@@ -443,6 +498,14 @@ Mood: ${mood.emoji} "${mood.text}"`,
       companion: current.companion ? { ...current.companion, xp: newXp } : undefined,
     }))
     onDone(`✨ ${companion.name} encontrou um bug brilhante escondido! +5 XP bônus!`, { display: 'system' })
+    return null
+  }
+
+  // Check for newly unlocked outfits
+  const newOutfits = checkAndUnlockOutfits()
+  if (newOutfits.length > 0) {
+    const streakMsg = streakResult.message ? `\n${streakResult.message}` : ''
+    onDone(`${reaction}${streakMsg}\n🎨 Novo outfit desbloqueado: ${newOutfits.join(', ')}!`, { display: 'system' })
     return null
   }
 

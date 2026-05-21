@@ -315,6 +315,9 @@ export type GlobalConfig = {
     daysActive: number
   }
   companionLastAction?: Record<string, number>
+  companionMemory?: Array<{ text: string; timestamp: number; trigger: string }>
+  companionOutfits?: string[]
+  companionActiveOutfit?: string
 
   // Feedback survey tracking
   feedbackSurveyState?: {

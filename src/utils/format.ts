@@ -54,20 +54,6 @@ export function formatDuration(
   let minutes = Math.floor((ms % 3600000) / 60000)
   let seconds = Math.floor((ms % 60000) / 1000)
 
-  // Handle rounding carry-over (e.g., 59.5s rounds to 60s)
-  if (seconds === 60) {
-    seconds = 0
-    minutes++
-  }
-  if (minutes === 60) {
-    minutes = 0
-    hours++
-  }
-  if (hours === 24) {
-    hours = 0
-    days++
-  }
-
   const hide = options?.hideTrailingZeros
 
   if (options?.mostSignificantOnly) {

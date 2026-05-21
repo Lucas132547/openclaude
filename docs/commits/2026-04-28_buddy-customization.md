@@ -101,8 +101,8 @@ graph LR
 
 | Campo / Função   | Regra de validação                         | Status |
 | ---------------- | ------------------------------------------ | ------ |
-| `/buddy rename`  | Exige > 2 XP e Level > 2                   | ✅     |
-| `/buddy reroll`  | Exige > 10 XP                              | ✅     |
+| `/buddy rename`  | Exige >= 5 XP e Level >= 2                 | ✅     |
+| `/buddy reroll`  | Exige >= 15 XP                             | ✅     |
 | `getCompanion()` | Suporta fallback dinâmico (Seed -> UserId) | ✅     |
 
 ---

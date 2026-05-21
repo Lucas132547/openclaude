@@ -5,23 +5,16 @@ import { Text } from '../ink.js';
 import { getGlobalConfig } from '../utils/config.js';
 import { getRainbowColor } from '../utils/thinking.js';
 import { isBuddyEnabled } from './feature.js';
-import { checkProductivityReminders, updateActivityTracker, type ReminderState, initialReminderState } from './reminders.js';
+import { checkProductivityReminders, updateActivityTracker, type ReminderState, createInitialReminderState, checkExpiredReminders } from './reminders.js';
 import { getCompanion } from './companion.js';
 
 // Local date, not UTC — 24h rolling wave across timezones. Sustained Twitter
 // buzz instead of a single UTC-midnight spike, gentler on soul-gen load.
 // Teaser window: April 1-7, 2026 only. Command stays live forever after.
 export function isBuddyTeaserWindow(): boolean {
-  // @ts-ignore
-  if ("external" === 'ant') return true;
+  if (process.env.USER_TYPE === 'ant') return true;
   const d = new Date();
   return d.getFullYear() === 2026 && d.getMonth() === 3 && d.getDate() <= 7;
-}
-export function isBuddyLive(): boolean {
-  // @ts-ignore
-  if ("external" === 'ant') return true;
-  const d = new Date();
-  return d.getFullYear() > 2026 || d.getFullYear() === 2026 && d.getMonth() >= 3;
 }
 function RainbowText(t0: any) {
   const $ = _c(2);
@@ -53,11 +46,12 @@ export function useBuddyNotification() {
   let t0;
   let t1;
 
-  const stateRef = useRef<ReminderState>({ ...initialReminderState });
+  const stateRef = useRef<ReminderState>(createInitialReminderState());
   const companion = getCompanion();
+  const companionName = companion?.name;
 
   useEffect(() => {
-    if (!companion) return;
+    if (!companionName) return;
 
     const interval = setInterval(() => {
       const message = checkProductivityReminders(stateRef.current);
@@ -65,14 +59,30 @@ export function useBuddyNotification() {
         addNotification({
           key: `buddy-reminder-${Date.now()}`,
           priority: 'medium',
-          text: `${companion.name}: ${message}`,
+          text: `${companionName}: ${message}`,
           timeoutMs: 10000,
         });
       }
     }, 60 * 1000);
 
-    return () => clearInterval(interval);
-  }, [companion, addNotification]);
+    // Custom reminders check
+    const reminderInterval = setInterval(() => {
+      const expired = checkExpiredReminders()
+      for (const reminder of expired) {
+        addNotification({
+          key: `buddy-custom-reminder-${reminder.createdAt}`,
+          priority: 'high',
+          text: `⏰ ${companionName}: Lembrete — ${reminder.text}`,
+          timeoutMs: 15000,
+        })
+      }
+    }, 30 * 1000)
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(reminderInterval);
+    };
+  }, [companionName, addNotification]);
 
   if ($[0] !== addNotification || $[1] !== removeNotification) {
     t0 = () => {

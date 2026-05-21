@@ -1,4 +1,5 @@
 import { getCompanion } from './companion.js'
+import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js'
 
 export type ReminderState = {
   sessionStartTime: number
@@ -7,15 +8,15 @@ export type ReminderState = {
   hasTriggeredIdleReminder: boolean
 }
 
-export const initialReminderState: ReminderState = {
+export const createInitialReminderState = (): ReminderState => ({
   sessionStartTime: Date.now(),
   lastActivityTime: Date.now(),
   hasTriggeredSessionReminder: false,
   hasTriggeredIdleReminder: false,
-}
+})
 
 // Global state for default usage
-let globalState = { ...initialReminderState }
+let globalState = createInitialReminderState()
 
 // Constants for time
 export const ONE_HOUR = 60 * 60 * 1000
@@ -63,4 +64,48 @@ export function checkProductivityReminders(
   }
 
   return null
+}
+
+export type CompanionReminder = {
+  text: string
+  at: number  // timestamp when reminder should fire
+  createdAt: number
+}
+
+export function addReminder(minutes: number, text: string): CompanionReminder {
+  const reminder: CompanionReminder = {
+    text,
+    at: Date.now() + minutes * 60 * 1000,
+    createdAt: Date.now(),
+  }
+
+  saveGlobalConfig(curr => ({
+    ...curr,
+    companionReminders: [...(curr.companionReminders ?? []), reminder],
+  }))
+
+  return reminder
+}
+
+export function checkExpiredReminders(): CompanionReminder[] {
+  const config = getGlobalConfig()
+  const reminders = config.companionReminders ?? []
+  const now = Date.now()
+  const expired = reminders.filter(r => r.at <= now)
+
+  if (expired.length > 0) {
+    // Remove expired reminders from config
+    const remaining = reminders.filter(r => r.at > now)
+    saveGlobalConfig(curr => ({
+      ...curr,
+      companionReminders: remaining,
+    }))
+  }
+
+  return expired
+}
+
+export function listReminders(): CompanionReminder[] {
+  const config = getGlobalConfig()
+  return config.companionReminders ?? []
 }

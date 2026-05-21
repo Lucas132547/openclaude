@@ -100,6 +100,7 @@ export type DetectedIDEInfo = {
 }
 
 export type IdeType =
+  | 'antigravity'
   | 'cursor'
   | 'windsurf'
   | 'vscode'
@@ -128,6 +129,13 @@ type IdeConfig = {
 }
 
 const supportedIdeConfigs: Record<IdeType, IdeConfig> = {
+  antigravity: {
+    ideKind: 'vscode',
+    displayName: 'Antigravity',
+    processKeywordsMac: ['Antigravity IDE Helper', 'Antigravity IDE.app'],
+    processKeywordsWindows: ['antigravity-ide.exe'],
+    processKeywordsLinux: ['antigravity-ide'],
+  },
   cursor: {
     ideKind: 'vscode',
     displayName: 'Cursor',
@@ -974,6 +982,7 @@ function getVSCodeIDECommandByParentProcess(): string | null {
       if (command) {
         // Check for known applications and extract the path up to and including .app
         const appNames = {
+          'Antigravity IDE.app': 'antigravity-ide',
           'Visual Studio Code.app': 'code',
           'Cursor.app': 'cursor',
           'Windsurf.app': 'windsurf',
@@ -1042,6 +1051,8 @@ async function getVSCodeIDECommand(ideType: IdeType): Promise<string | null> {
       return 'cursor' + ext
     case 'windsurf':
       return 'windsurf' + ext
+    case 'antigravity':
+      return 'antigravity-ide' + ext
     default:
       break
   }
