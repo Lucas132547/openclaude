@@ -2044,6 +2044,8 @@ async function* queryModel(
                   // since there doesn't seem to be a way to detect when a
                   // content_block_delta message duplicates the text.
                   text: '',
+                  // Initialize citations array for accumulation from citations_delta events
+                  citations: [],
                 }
                 break
               case 'thinking':
@@ -2101,7 +2103,21 @@ async function* queryModel(
             } else {
               switch (delta.type) {
                 case 'citations_delta':
-                  // TODO: handle citations
+                  if (contentBlock.type !== 'text') {
+                    logEvent('tengu_streaming_error', {
+                      error_type:
+                        'content_block_type_mismatch_citations' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                      expected_type:
+                        'text' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                      actual_type:
+                        contentBlock.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                    })
+                    break
+                  }
+                  if (!contentBlock.citations) {
+                    contentBlock.citations = []
+                  }
+                  contentBlock.citations.push(delta.citation)
                   break
                 case 'input_json_delta':
                   if (
