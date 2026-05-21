@@ -190,11 +190,41 @@ export async function runSearch(
   }
 
   // All providers failed in auto mode
-  const lastErr = errors[errors.length - 1]
-  if (!lastErr) throw new Error('All search providers failed with no error details.')
-  if (errors.length === 1) throw lastErr
-  throw new Error(
-    `All ${errors.length} search providers failed:\n` +
-    errors.map((e, i) => `  ${i + 1}. ${e.message}`).join('\n'),
-  )
+  if (errors.length === 0) throw new Error('All search providers failed with no error details.')
+  throw new Error(buildAllProvidersFailedError(errors))
+}
+
+/**
+ * User-friendly error message when all search providers fail in auto mode.
+ *
+ * Distinguishes three scenarios:
+ *   1. No providers configured at all (only DDG was tried, and it failed)
+ *   2. Some providers configured but all failed
+ *   3. Only DDG was configured (the always-available default) and it failed
+ *
+ * In all cases, the message guides the user toward configuring a reliable
+ * API-backed provider (Brave is recommended as the first choice due to its
+ * generous free tier and independent index).
+ */
+function buildAllProvidersFailedError(errors: Error[]): string {
+  const configuredCount = errors.length
+  const onlyDdgFailed = configuredCount === 1
+
+  const header = onlyDdgFailed
+    ? 'Web search failed. DuckDuckGo (the default free backend) is rate-limited or blocked from this network.'
+    : `All ${configuredCount} web search providers failed.`
+
+  const suggestion =
+    'For reliable web search, configure an API-backed provider:\n' +
+    '  - BRAVE_API_KEY  (recommended — independent index, generous free tier at brave.com/search/api)\n' +
+    '  - TAVILY_API_KEY (AI-optimized, fast)\n' +
+    '  - EXA_API_KEY    (neural/semantic search)\n' +
+    '  - FIRECRAWL_API_KEY, JINA_API_KEY, BING_API_KEY, MOJEEK_API_KEY, LINKUP_API_KEY, YOU_API_KEY\n' +
+    'Or set WEB_SEARCH_PROVIDER=native if using an Anthropic/Vertex/Foundry provider.'
+
+  const details = errors
+    .map((e, i) => `  ${i + 1}. ${e.message}`)
+    .join('\n')
+
+  return `${header}\n\n${suggestion}\n\nErrors:\n${details}`
 }

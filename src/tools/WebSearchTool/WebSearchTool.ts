@@ -122,7 +122,8 @@ function buildEmptyAdapterResultHint(provider: string, providerName: string): st
     `No results from "${providerName}" search backend for provider "${provider}". ` +
     `The default DuckDuckGo backend is rate-limited from many networks (datacenter IPs, VPNs, repeated requests) and returns 0 results when blocked. ` +
     `For reliable web search on this provider, set one of: ` +
-    `FIRECRAWL_API_KEY, TAVILY_API_KEY, EXA_API_KEY, JINA_API_KEY, BING_API_KEY, MOJEEK_API_KEY, LINKUP_API_KEY, YOU_API_KEY — ` +
+    `BRAVE_API_KEY (recommended — generous free tier), TAVILY_API_KEY, EXA_API_KEY, ` +
+    `FIRECRAWL_API_KEY, JINA_API_KEY, BING_API_KEY, MOJEEK_API_KEY, LINKUP_API_KEY, YOU_API_KEY — ` +
     `or switch to an Anthropic / Vertex / Foundry provider that supports the native web_search tool.`
   )
 }
@@ -369,7 +370,10 @@ function buildAdapterUnavailableError(
   return (
     `Web search is unavailable for provider "${provider}". ` +
     `The search adapter failed (${errMsg}). ` +
-    `Try switching to a provider with built-in web search (e.g. Anthropic, Codex) or try again later.`
+    `To fix this, either:\n` +
+    `  1. Set BRAVE_API_KEY for reliable search (recommended — brave.com/search/api)\n` +
+    `  2. Set another search API key: TAVILY_API_KEY, EXA_API_KEY, FIRECRAWL_API_KEY, etc.\n` +
+    `  3. Switch to a provider with built-in web search (e.g. Anthropic, Vertex, Foundry, Codex)`
   )
 }
 
