@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="openclaude — runs anywhere, uses anything. open source, model-neutral, terminal-first. by gitlawb." />
-    <meta name="theme-color" content="#fafaf7" />
+    <meta name="theme-color" content="#000000" />
     <meta name="color-scheme" content="light dark" />
     <meta property="og:title" content="openclaude — runs anywhere, uses anything" />
     <meta property="og:description" content="not a chatbot wrapper or another ide plugin. an open coding agent that runs in your terminal, talks to any model, and keeps every change reviewable." />
@@ -20,15 +20,23 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&display=swap" />
     <script>
       // Theme bootstrap — runs before paint to prevent flash.
-      // Default is light; user toggle is honored via localStorage.
+      // Default is dark; user toggle is honored via localStorage.
       (function () {
         try {
-          var stored = localStorage.getItem('openclaude-theme');
-          var theme = stored === 'dark' || stored === 'light' ? stored : 'light';
+          var stored = localStorage.getItem('openclaude-settings');
+          var theme = 'dark';
+          if (stored) {
+            try {
+              var parsed = JSON.parse(stored);
+              if (parsed.state && (parsed.state.theme === 'light' || parsed.state.theme === 'dark')) {
+                theme = parsed.state.theme;
+              }
+            } catch (_) {}
+          }
           document.documentElement.dataset.theme = theme;
           document.documentElement.style.colorScheme = theme;
         } catch (_) {
-          document.documentElement.dataset.theme = 'light';
+          document.documentElement.dataset.theme = 'dark';
         }
       })();
     </script>
