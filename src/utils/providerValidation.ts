@@ -449,15 +449,6 @@ export async function getProviderValidationError(
       )
 
       if (descriptorValidationError) {
-        if (
-          validationTarget.kind === 'vendor' &&
-          validationTarget.descriptor.id === 'openai' &&
-          !env.OPENAI_API_KEY &&
-          !isLocalProviderUrl(request.baseUrl)
-        ) {
-          return getOpenAIMissingKeyMessage()
-        }
-
         return descriptorValidationError
       }
 
@@ -467,10 +458,6 @@ export async function getProviderValidationError(
 
   if (genericRouteValidation.applicable) {
     return genericRouteValidation.error
-  }
-
-  if (!env.OPENAI_API_KEY && !isLocalProviderUrl(request.baseUrl)) {
-    return getOpenAIMissingKeyMessage()
   }
 
   return null

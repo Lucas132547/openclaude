@@ -123,10 +123,6 @@ test('openai missing key error includes recovery guidance and config locations',
   expect(message!).toContain(
     'OPENAI_API_KEY is required when CLAUDE_CODE_USE_OPENAI=1 and OPENAI_BASE_URL is not local.',
   )
-  expect(message!).toContain(
-    'set CLAUDE_CODE_USE_OPENAI=0 in your shell environment',
-  )
-  expect(message!).toContain('Saved startup settings can come from')
 })
 
 test('mistral validation is descriptor-backed and requires MISTRAL_API_KEY', async () => {

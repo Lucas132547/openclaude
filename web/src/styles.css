@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ── reset + tokens ───────────────────────────────────────────────────── */
 
 * { box-sizing: border-box; }
@@ -527,4 +531,155 @@ h1, h2, h3, p { margin-top: 0; }
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* ── chat layout ────────────────────────────────────────────────────── */
+
+#root {
+  height: 100vh;
+}
+
+/* ── prose-chat (markdown renderer) ─────────────────────────────────── */
+
+.prose-chat {
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--ink-2);
+}
+
+.prose-chat p {
+  margin-bottom: 0.75rem;
+}
+
+.prose-chat p:last-child {
+  margin-bottom: 0;
+}
+
+.prose-chat strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.prose-chat em {
+  color: var(--muted);
+}
+
+.prose-chat ul,
+.prose-chat ol {
+  margin-bottom: 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.prose-chat li {
+  margin-bottom: 0.25rem;
+}
+
+.prose-chat code {
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 122, 26, 0.06);
+  color: var(--accent-2);
+  font-size: 0.82em;
+  border-radius: 3px;
+}
+
+.prose-chat pre {
+  margin: 0.75rem 0;
+}
+
+.prose-chat pre code {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+}
+
+.prose-chat blockquote {
+  border-left: 2px solid var(--accent-line);
+  padding-left: 0.75rem;
+  margin: 0.75rem 0;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.prose-chat a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose-chat a:hover {
+  color: var(--accent-2);
+}
+
+.prose-chat h1,
+.prose-chat h2,
+.prose-chat h3 {
+  color: var(--ink);
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose-chat h1:first-child,
+.prose-chat h2:first-child,
+.prose-chat h3:first-child {
+  margin-top: 0;
+}
+
+.prose-chat h1 { font-size: 1.25rem; }
+.prose-chat h2 { font-size: 1.1rem; }
+.prose-chat h3 { font-size: 1rem; }
+
+.prose-chat hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 1rem 0;
+}
+
+.prose-chat table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  margin: 0.75rem 0;
+}
+
+.prose-chat th,
+.prose-chat td {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--line);
+  text-align: left;
+}
+
+.prose-chat th {
+  background: var(--bg-soft);
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+
+/* ── chat scrollbar ─────────────────────────────────────────────────── */
+
+.chat-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 2px;
+}
+
+/* ── utility animations ─────────────────────────────────────────────── */
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }

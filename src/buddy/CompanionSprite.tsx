@@ -14,8 +14,8 @@ import { isBuddyEnabled } from './feature.js';
 import { renderFace, renderSprite, spriteFrameCount } from './sprites.js';
 import { RARITY_COLORS } from './types.js';
 const TICK_MS = 500;
-const BUBBLE_SHOW = 20; // ticks → ~10s at 500ms
-const FADE_WINDOW = 6; // last ~3s the bubble dims so you know it's about to go
+const BUBBLE_SHOW = 40; // ticks → ~20s at 500ms
+const FADE_WINDOW = 8; // last ~4s the bubble dims so you know it's about to go
 const PET_BURST_MS = 2500; // how long hearts float after /buddy pet
 
 // Idle sequence: mostly rest (frame 0), occasional fidget (frames 1-2), rare blink.
@@ -67,7 +67,7 @@ function SpeechBubble(t0) {
     t5 = 34;
     let t7;
     if ($[11] !== fading) {
-      t7 = (l, i) => <Text key={i} italic={true} dimColor={!fading} color={fading ? "inactive" : undefined}>{l}</Text>;
+      t7 = (l, i) => <Text key={i} italic={true} dimColor={fading} color={fading ? "inactive" : undefined}>{l}</Text>;
       $[11] = fading;
       $[12] = t7;
     } else {
@@ -154,7 +154,7 @@ const SPRITE_BODY_WIDTH = 12;
 const NAME_ROW_PAD = 2; // focused state wraps name in spaces: ` name `
 const SPRITE_PADDING_X = 2;
 const BUBBLE_WIDTH = 36; // SpeechBubble box (34) + tail column
-const NARROW_QUIP_CAP = 24;
+const NARROW_QUIP_CAP = 40;
 function spriteColWidth(nameWidth: number): number {
   return Math.max(SPRITE_BODY_WIDTH, nameWidth + NAME_ROW_PAD);
 }

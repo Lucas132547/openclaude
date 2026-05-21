@@ -22,17 +22,36 @@ OpenClaude supports multiple search backends through a provider adapter system.
 | Linkup | `LINKUP_API_KEY` | `Authorization: Bearer` | POST |
 | DuckDuckGo | *(default)* | — | SDK |
 
+## Fallback Chain
+
+In `auto` mode (the default), providers are tried in this order:
+
+```
+firecrawl → tavily → exa → you → jina → brave → bing → mojeek → linkup → duckduckgo
+```
+
+**Only providers with configured API keys are tried.** DuckDuckGo is always available (no key needed) but is rate-limited from many networks. If all providers fail, a user-friendly error guides you toward configuring a reliable API-backed provider.
+
+**Recommended setup:** Set `BRAVE_API_KEY` for the best free-tier experience:
+- Independent web index (not Google/Bing dependent)
+- Generous free tier (2,000 queries/month)
+- Fast, reliable, no scraping fragility
+
+```bash
+export BRAVE_API_KEY=your-brave-key
+```
+
 ## Quick Start
 
 ```bash
-# Tavily (recommended for AI — fast, RAG-ready)
+# Brave (recommended — independent index, generous free tier)
+export BRAVE_API_KEY=your-brave-key
+
+# Tavily (AI-optimized, fast, RAG-ready)
 export TAVILY_API_KEY=tvly-your-key
 
 # Exa (neural search, semantic queries)
 export EXA_API_KEY=your-exa-key
-
-# Brave (independent index, good free tier)
-export BRAVE_API_KEY=your-brave-key
 
 # Bing
 export BING_API_KEY=your-bing-key

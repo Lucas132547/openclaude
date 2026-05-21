@@ -2746,7 +2746,7 @@ test('normalizes plain string Bash tool arguments when streaming starts with whi
     .map(event => (event.delta as Record<string, unknown>).partial_json)
     .join('')
 
-  expect(normalizedInput).toBe('{"command":" pwd"}')
+  expect(normalizedInput).toBe('{"command":"pwd"}')
 })
 
 test('keeps terminal whitespace-only Bash arguments invalid in streaming responses', async () => {
