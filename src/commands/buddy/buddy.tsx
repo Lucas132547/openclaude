@@ -116,12 +116,13 @@ export async function call(
     const levelInfo = getLevelInfo(xp)
     const mutedStatus = getGlobalConfig().companionMuted ? 'Muted' : 'Listening'
     const xpDisplay = xp % 1 === 0 ? xp.toString() : xp.toFixed(1)
+    const mood = getMood()
     onDone(
       `Name: ${companion.name} (${titleCase(companion.rarity)} ${companion.species})
 Level: ${levelInfo.level} (${xpDisplay} XP)
 State: ${mutedStatus}
 Personality: ${companion.personality}
-Mood: "${levelInfo.status}"`,
+Mood: ${mood.emoji} "${mood.text}"`,
       { display: 'system' },
     )
     return null
