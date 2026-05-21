@@ -5,6 +5,7 @@ import { getUserMessageText } from '../utils/messages.js'
 import { getCompanion } from './companion.js'
 import { pickDeterministic } from './hash.js'
 import { getLevelInfo } from './progression.js'
+import { getErrorTip } from './skills.js'
 
 const DIRECT_REPLIES = [
   'I am observing.',
@@ -178,6 +179,11 @@ export async function fireCompanionObserver(
     if (isError || isBashFailure) {
        incrementStat('totalErrors')
        onReaction(`${companion.name}: ${ERROR_REPLIES[Math.floor(Date.now() / 1000) % ERROR_REPLIES.length]!}`)
+       // Skill: dica contextual (Level 2+)
+       const tip = getErrorTip()
+       if (tip) {
+         setTimeout(() => onReaction(`${companion.name}: 💡 ${tip}`), 2000)
+       }
        return
     }
 

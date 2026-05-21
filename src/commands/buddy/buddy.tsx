@@ -6,6 +6,7 @@ import type { StoredCompanion, Companion } from '../../buddy/types.js'
 import { pickDeterministic } from '../../buddy/hash.js'
 import { processStreak } from '../../buddy/streak.js'
 import { getMood } from '../../buddy/mood.js'
+import { getSessionSummary } from '../../buddy/skills.js'
 import { COMMON_HELP_ARGS, COMMON_INFO_ARGS } from '../../constants/xml.js'
 
 const NAME_PREFIXES = [
@@ -82,7 +83,7 @@ function setCompanionReaction(
 
 function showHelp(onDone: LocalJSXCommandOnDone): void {
   onDone(
-    'Usage: /buddy [status|mute|unmute|rename|reroll|brincar|alimentar|stats|help]\n\nRun /buddy with no args to hatch your companion the first time, then pet it on later runs.\n\nXP Sources:\n  Bash success: +0.1 XP\n  Daily pet: +1 XP (first /buddy of the day)\n  Task completed: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n\nCommands:\n  /buddy rename <name> — Cost: 5 XP, Requires Level 2\n  /buddy reroll — Cost: 15 XP\n  /buddy brincar — Brinque com seu buddy (cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy stats — Mostra estatísticas do buddy',
+    'Usage: /buddy [status|mute|unmute|rename|reroll|brincar|alimentar|stats|help]\n\nRun /buddy with no args to hatch your companion the first time, then pet it on later runs.\n\nXP Sources:\n  Bash success: +0.1 XP\n  Daily pet: +1 XP (first /buddy of the day)\n  Task completed: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n\nCommands:\n  /buddy rename <name> — Cost: 5 XP, Requires Level 2\n  /buddy reroll — Cost: 15 XP\n  /buddy brincar — Brinque com seu buddy (cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)',
     { display: 'system' },
   )
 }
@@ -154,6 +155,16 @@ Mood: ${mood.emoji} "${mood.text}"`,
       `Dias ativos: ${stats.daysActive}`,
       { display: 'system' },
     )
+    return null
+  }
+
+  if (arg === 'resumo') {
+    const summary = getSessionSummary()
+    if (!summary) {
+      onDone('Seu buddy precisa estar no Level 4 para dar resumos.', { display: 'system' })
+      return null
+    }
+    onDone(summary, { display: 'system' })
     return null
   }
 
