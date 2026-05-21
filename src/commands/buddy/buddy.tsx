@@ -3,6 +3,7 @@ import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 import { getLevelInfo } from '../../buddy/progression.js'
 import { companionUserId, getCompanion, rollWithSeed } from '../../buddy/companion.js'
 import type { StoredCompanion, Companion } from '../../buddy/types.js'
+import { pickDeterministic } from '../../buddy/hash.js'
 import { COMMON_HELP_ARGS, COMMON_INFO_ARGS } from '../../constants/xml.js'
 
 const NAME_PREFIXES = [
@@ -47,19 +48,6 @@ const PET_REACTIONS = [
   'wiggles happily',
 ] as const
 
-function hashString(s: string): number {
-  let h = 2166136261
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i)
-    h = Math.imul(h, 16777619)
-  }
-  return h >>> 0
-}
-
-function pickDeterministic<T>(items: readonly T[], seed: string): T {
-  return items[hashString(seed) % items.length]!
-}
-
 function titleCase(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
@@ -92,7 +80,7 @@ function setCompanionReaction(
 
 function showHelp(onDone: LocalJSXCommandOnDone): void {
   onDone(
-    'Usage: /buddy [status|mute|unmute]\n\nRun /buddy with no args to hatch your companion the first time, then pet it on later runs.',
+    'Usage: /buddy [status|mute|unmute|rename|reroll]\n\nRun /buddy with no args to hatch your companion the first time, then pet it on later runs.\n\nXP Sources:\n  Bash success: +0.1 XP\n  Daily pet: +1 XP (first /buddy of the day)\n  Task completed: +3 XP\n\nCommands:\n  /buddy rename <name> — Cost: 5 XP, Requires Level 2\n  /buddy reroll — Cost: 15 XP',
     { display: 'system' },
   )
 }
@@ -114,11 +102,6 @@ export async function call(
     }
   }
 
-  if (COMMON_HELP_ARGS.includes(arg)) {
-    showHelp(onDone)
-    return null
-  }
-
   if (COMMON_INFO_ARGS.includes(arg) || arg === 'status') {
     const companion = getCompanion()
     if (!companion) {
@@ -130,9 +113,10 @@ export async function call(
     const xp = companion.xp ?? 0
     const levelInfo = getLevelInfo(xp)
     const mutedStatus = getGlobalConfig().companionMuted ? 'Muted' : 'Listening'
+    const xpDisplay = xp % 1 === 0 ? xp.toString() : xp.toFixed(1)
     onDone(
       `Name: ${companion.name} (${titleCase(companion.rarity)} ${companion.species})
-Level: ${levelInfo.level} (${xp} XP)
+Level: ${levelInfo.level} (${xpDisplay} XP)
 State: ${mutedStatus}
 Personality: ${companion.personality}
 Mood: "${levelInfo.status}"`,
@@ -152,40 +136,36 @@ Mood: "${levelInfo.status}"`,
       return null
     }
 
-    const newName = restArgs.join(' ')
-    if (!newName) {
-      onDone('Usage: /buddy rename <new name>\nCost: 2 XP, Requires Level 2', { display: 'system' })
+    const newName = restArgs.join(' ').trim()
+    if (!newName || newName.length > 30) {
+      onDone('Usage: /buddy rename <new name>\nName must be between 1 and 30 characters.\nCost: 5 XP, Requires Level 2', { display: 'system' })
       return null
     }
 
     const xp = companion.xp ?? 0
     const levelInfo = getLevelInfo(xp)
 
-    // 1. Check if the user meets the level requirement (Level >= 2). If not, call onDone with an error message and return null.
     if (levelInfo.level < 2) {
       onDone(`Your buddy needs to be at least Level 2 to be renamed. (Current: Level ${levelInfo.level})`, { display: 'system' })
       return null
     }
 
-    // 2. Check if the user has enough XP (xp >= 2). If not, call onDone with an error message and return null.
-    if (xp < 2) {
-      onDone(`Renaming costs 2 XP. You only have ${xp} XP.`, { display: 'system' })
+    if (xp < 5) {
+      onDone(`Renaming costs 5 XP. You only have ${xp} XP.`, { display: 'system' })
       return null
     }
 
-    // 3. Update the global config using saveGlobalConfig
     saveGlobalConfig(current => ({
       ...current,
       companion: current.companion ? {
         ...current.companion,
         name: titleCase(newName),
-        xp: xp - 2,
+        xp: xp - 5,
       } : undefined,
     }))
 
-    // 4. Set a reaction and call onDone with a success message.
     setCompanionReaction(context, `*happy noises* I like my new name!`, true)
-    onDone(`Successfully renamed your buddy to ${titleCase(newName)}! (Cost: 2 XP)`, { display: 'system' })
+    onDone(`Successfully renamed your buddy to ${titleCase(newName)}! (Cost: 5 XP)`, { display: 'system' })
     return null
   }
 
@@ -198,28 +178,24 @@ Mood: "${levelInfo.status}"`,
 
     const xp = companion.xp ?? 0
 
-    // 1. Check if the user has enough XP (xp >= 10). If not, call onDone with an error message and return null.
-    if (xp < 10) {
-      onDone(`Rerolling costs 10 XP. You only have ${xp} XP.`, { display: 'system' })
+    if (xp < 15) {
+      onDone(`Rerolling costs 15 XP. You only have ${xp} XP.`, { display: 'system' })
       return null
     }
 
-    // 2. Create a new random seed.
     const newSeed = Math.random().toString(36).substring(7)
 
-    // 3. Update the global config using saveGlobalConfig
     saveGlobalConfig(current => ({
       ...current,
       companion: current.companion ? {
         ...current.companion,
-        xp: xp - 10,
+        xp: xp - 15,
         seed: newSeed,
       } : undefined,
     }))
 
-    // 4. Set a reaction and call onDone with a success message.
     setCompanionReaction(context, `*poof* I feel different!`, true)
-    onDone(`Successfully rerolled your buddy! (Cost: 10 XP). Run /buddy status to see the changes.`, { display: 'system' })
+    onDone(`Successfully rerolled your buddy! (Cost: 15 XP). Run /buddy status to see the changes.`, { display: 'system' })
     return null
   }
 
@@ -273,6 +249,33 @@ Mood: "${levelInfo.status}"`,
     PET_REACTIONS,
     `${Date.now()}:${companion.name}`,
   )}`
+
+  // Daily pet XP: +1 XP for the first pet of the day
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const lastPetDate = getGlobalConfig().companionLastPetDate
+  if (lastPetDate !== today) {
+    const xp = companion.xp ?? 0
+    const newXp = Math.round((xp + 1) * 10) / 10
+    const oldInfo = getLevelInfo(xp)
+    const newInfo = getLevelInfo(newXp)
+
+    saveGlobalConfig(current => ({
+      ...current,
+      companionLastPetDate: today,
+      companion: current.companion ? {
+        ...current.companion,
+        xp: newXp,
+        hat: newInfo.hat ?? current.companion.hat,
+      } : undefined,
+    }))
+
+    if (oldInfo.level !== newInfo.level) {
+      onDone(`${reaction}\n${companion.name}: Uau! Subi para o Nível ${newInfo.level} e ganhei um chapéu novo!`, { display: 'system' })
+      return null
+    }
+  }
+
   setCompanionReaction(context, reaction, true)
   onDone(undefined, { display: 'skip' })
   return null

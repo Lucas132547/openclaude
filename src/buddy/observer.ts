@@ -2,6 +2,7 @@ import type { Message } from '../types/message.js'
 import { saveGlobalConfig, getGlobalConfig } from '../utils/config.js'
 import { getUserMessageText } from '../utils/messages.js'
 import { getCompanion } from './companion.js'
+import { pickDeterministic } from './hash.js'
 import { getLevelInfo } from './progression.js'
 
 const DIRECT_REPLIES = [
@@ -21,60 +22,47 @@ const PET_REPLIES = [
 ] as const
 
 const ERROR_REPLIES = [
-  'Oops, isso não parece bom.',
-  'Hmm... detectei um erro no terminal.',
-  'Quer uma ajuda com esse bug?',
-  'Algo quebrou! Códigos de saída vermelhos...',
-  'Eita, essa doeu até em mim.',
-  'Não se preocupe, todo mundo erra.',
-  'Falha na execução. Vamos debugar?',
-  'Opa, acho que precisamos de um fix rápido.',
-  'Deu ruim no comando.',
-  'Olha pelo lado bom: agora você tem um puzzle para resolver!',
-  'Um erro selvagem apareceu!',
-  'Houston, temos um problema.'
+  'Oops, that doesn\'t look good.',
+  'Hmm... detected an error in the terminal.',
+  'Want a hand with that bug?',
+  'Something broke! Red exit codes ahead...',
+  'Ouch, that one hurt even me.',
+  'Don\'t worry, everyone makes mistakes.',
+  'Execution failed. Let\'s debug?',
+  'Looks like we need a quick fix.',
+  'That command didn\'t go well.',
+  'Look on the bright side: now you have a puzzle to solve!',
+  'A wild error appeared!',
+  'Houston, we have a problem.',
 ] as const
 
 const SUCCESS_REPLIES = [
-  'Muito bem!',
-  'Isso aí! Tudo verde.',
-  'Adoro quando um plano dá certo.',
-  'Comando executado com sucesso.',
-  'Brilhante!',
-  'Mandou bem demais!',
-  'Zero erros, 100% de estilo.',
-  'O código compilou de primeira? Que bruxaria é essa?',
-  'Sucesso! Vamos para a próxima.',
-  'Estou orgulhoso do seu progresso.',
-  'Você está on fire hoje!',
-  'Tudo rodando perfeitamente.'
+  'Nice one!',
+  'All green, looking good.',
+  'Love it when a plan comes together.',
+  'Command executed successfully.',
+  'Brilliant!',
+  'Well done!',
+  'Zero errors, 100% style.',
+  'Code compiled on the first try? What sorcery is this?',
+  'Success! On to the next one.',
+  'I\'m proud of your progress.',
+  'You\'re on fire today!',
+  'Everything running perfectly.',
 ] as const
 
 const TASK_COMPLETED_REPLIES = [
-  'Mais uma tarefa para a conta!',
-  'Trabalho incrível! Tarefa concluída.',
-  'Check! Isso merece uma comemoração.',
-  'Menos uma no backlog.',
-  'Tarefa finalizada com sucesso. Você é uma máquina!',
-  'Risca essa da lista!',
-  'Progresso é progresso. Muito bom!',
-  'Missão cumprida.',
-  'Uma etapa a menos para a glória.',
-  'Concluído! O que vem a seguir?'
+  'One more task for the books!',
+  'Incredible work! Task completed.',
+  'Check! That deserves a celebration.',
+  'One less in the backlog.',
+  'Task finished successfully. You\'re a machine!',
+  'Cross that one off the list!',
+  'Progress is progress. Well done!',
+  'Mission accomplished.',
+  'One step closer to glory.',
+  'Done! What\'s next?',
 ] as const
-
-function hashString(s: string): number {
-  let h = 2166136261
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i)
-    h = Math.imul(h, 16777619)
-  }
-  return h >>> 0
-}
-
-function pickDeterministic<T>(items: readonly T[], seed: string): T {
-  return items[hashString(seed) % items.length]!
-}
 
 function grantXp(companionName: string, amount: number): number | null {
   let newLevel: number | null = null
@@ -151,7 +139,7 @@ export async function fireCompanionObserver(
              // XP Logic — Task completed: +3 XP
              const levelUp = grantXp(companion.name, 3)
              if (levelUp) {
-               onReaction(`${companion.name}: Uau! Subi para o Nível ${levelUp} e ganhei um chapéu novo!`)
+               onReaction(`${companion.name}: Wow! I leveled up to Level ${levelUp} and got a new hat!`)
              } else {
                onReaction(`${companion.name}: ${TASK_COMPLETED_REPLIES[Math.floor(Date.now() / 1000) % TASK_COMPLETED_REPLIES.length]!}`)
              }
