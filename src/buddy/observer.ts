@@ -1,3 +1,4 @@
+import { execSync } from 'child_process'
 import type { Message } from '../types/message.js'
 import { saveGlobalConfig, getGlobalConfig } from '../utils/config.js'
 import { getUserMessageText } from '../utils/messages.js'
@@ -188,6 +189,31 @@ export async function fireCompanionObserver(
 
         if (Date.now() % 5 === 0) {
             onReaction(`${companion.name}: ${SUCCESS_REPLIES[Math.floor(Date.now() / 1000) % SUCCESS_REPLIES.length]!}`)
+        }
+
+        // Git status awareness (10% chance to avoid spam)
+        if (Date.now() % 10 === 0) {
+            try {
+              const gitStatus = execSync('git status --porcelain 2>/dev/null', { encoding: 'utf8', timeout: 2000 }).trim()
+              const uncommittedCount = gitStatus ? gitStatus.split('\n').length : 0
+
+              if (uncommittedCount > 10) {
+                onReaction(`${companion.name}: Você tem ${uncommittedCount} arquivos não commitados... talvez seja hora de um commit?`)
+                return
+              }
+            } catch {
+              // Not in a git repo or git not available — ignore
+            }
+
+            try {
+              const behind = execSync('git rev-list --count HEAD..@{upstream} 2>/dev/null', { encoding: 'utf8', timeout: 2000 }).trim()
+              if (behind && parseInt(behind) > 5) {
+                onReaction(`${companion.name}: Sua branch está ${behind} commits atrás do remote. Hora de dar pull!`)
+                return
+              }
+            } catch {
+              // No upstream or not in git repo — ignore
+            }
         }
     }
   }
