@@ -76,6 +76,34 @@ function pickDeterministic<T>(items: readonly T[], seed: string): T {
   return items[hashString(seed) % items.length]!
 }
 
+function grantXp(companionName: string, amount: number): number | null {
+  let newLevel: number | null = null
+
+  saveGlobalConfig(curr => {
+    if (!curr.companion) return curr
+
+    const currentXp = curr.companion.xp ?? 0
+    const newXp = Math.round((currentXp + amount) * 10) / 10
+    const oldInfo = getLevelInfo(currentXp)
+    const newInfo = getLevelInfo(newXp)
+
+    if (oldInfo.level !== newInfo.level) {
+      newLevel = newInfo.level
+    }
+
+    return {
+      ...curr,
+      companion: {
+        ...curr.companion,
+        xp: newXp,
+        hat: newInfo.hat ?? curr.companion.hat
+      }
+    }
+  })
+
+  return newLevel
+}
+
 export async function fireCompanionObserver(
   messages: Message[],
   onReaction: (reaction: string | undefined) => void,
@@ -120,30 +148,12 @@ export async function fireCompanionObserver(
         if (content.type === 'tool_use' && content.name === 'TaskUpdate') {
           const input = content.input
           if (typeof input === 'object' && input !== null && 'status' in input && input.status === 'completed') {
-             // XP Logic
-             const config = getGlobalConfig()
-             const currentXp = config.companion?.xp ?? 0
-             const newXp = currentXp + 1
-
-             const oldInfo = getLevelInfo(currentXp)
-             const newInfo = getLevelInfo(newXp)
-
-             saveGlobalConfig(curr => {
-               if (!curr.companion) return curr
-               return {
-                 ...curr,
-                 companion: {
-                   ...curr.companion,
-                   xp: newXp,
-                   hat: newInfo.hat ?? curr.companion.hat
-                 }
-               }
-             })
-
-             if (oldInfo.level !== newInfo.level) {
-               onReaction(`${companion.name}: Uau! Subi para o Nível ${newInfo.level} e ganhei um chapéu novo!`)
+             // XP Logic — Task completed: +3 XP
+             const levelUp = grantXp(companion.name, 3)
+             if (levelUp) {
+               onReaction(`${companion.name}: Uau! Subi para o Nível ${levelUp} e ganhei um chapéu novo!`)
              } else {
-               onReaction(`${companion.name}: ${pickDeterministic(TASK_COMPLETED_REPLIES, Date.now().toString())}`)
+               onReaction(`${companion.name}: ${TASK_COMPLETED_REPLIES[Math.floor(Date.now() / 1000) % TASK_COMPLETED_REPLIES.length]!}`)
              }
              return
           }
@@ -162,14 +172,17 @@ export async function fireCompanionObserver(
       (contentStr.includes('Error: Exit code') || contentStr.includes('Command failed'));
 
     if (isError || isBashFailure) {
-       onReaction(`${companion.name}: ${pickDeterministic(ERROR_REPLIES, Date.now().toString())}`)
+       onReaction(`${companion.name}: ${ERROR_REPLIES[Math.floor(Date.now() / 1000) % ERROR_REPLIES.length]!}`)
        return
     }
 
     // Occasional success reaction (approx 20% chance on successful Bash/tool execution)
     if (lastMessage.name === 'Bash' && !isError && !isBashFailure) {
-        if (Math.random() < 0.20) {
-            onReaction(`${companion.name}: ${pickDeterministic(SUCCESS_REPLIES, Date.now().toString())}`)
+        // Bash success: +0.1 XP
+        grantXp(companion.name, 0.1)
+
+        if (Date.now() % 5 === 0) {
+            onReaction(`${companion.name}: ${SUCCESS_REPLIES[Math.floor(Date.now() / 1000) % SUCCESS_REPLIES.length]!}`)
         }
     }
   }
