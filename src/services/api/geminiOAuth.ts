@@ -1,3 +1,4 @@
+import { createCombinedAbortSignal } from '../../utils/combinedAbortSignal.js'
 import { AuthCodeListener } from '../oauth/auth-code-listener.js'
 import {
   generateCodeChallenge,
@@ -123,40 +124,45 @@ async function exchangeAuthorizationCode(options: {
     code_verifier: options.codeVerifier,
   })
 
-  const response = await fetch(GEMINI_TOKEN_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body,
-    signal: options.signal
-      ? AbortSignal.any([options.signal, AbortSignal.timeout(15_000)])
-      : AbortSignal.timeout(15_000),
+  const { signal, cleanup } = createCombinedAbortSignal(options.signal, {
+    timeoutMs: 15_000,
   })
+  try {
+    const response = await fetch(GEMINI_TOKEN_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body,
+      signal,
+    })
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '')
-    throw new Error(
-      errorText.trim()
-        ? `Gemini OAuth token exchange failed (${response.status}): ${errorText.trim()}`
-        : `Gemini OAuth token exchange failed with status ${response.status}.`,
-    )
-  }
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '')
+      throw new Error(
+        errorText.trim()
+          ? `Gemini OAuth token exchange failed (${response.status}): ${errorText.trim()}`
+          : `Gemini OAuth token exchange failed with status ${response.status}.`,
+      )
+    }
 
-  const payload = (await response.json()) as GeminiOAuthTokenResponse
-  const accessToken = asTrimmedString(payload.access_token)
-  
-  if (!accessToken) {
-    throw new Error(
-      'Gemini OAuth completed, but the token response was missing access token.',
-    )
-  }
+    const payload = (await response.json()) as GeminiOAuthTokenResponse
+    const accessToken = asTrimmedString(payload.access_token)
 
-  return {
-    accessToken,
-    refreshToken: asTrimmedString(payload.refresh_token) || '',
-    idToken: asTrimmedString(payload.id_token),
-    expiresIn: payload.expires_in,
+    if (!accessToken) {
+      throw new Error(
+        'Gemini OAuth completed, but the token response was missing access token.',
+      )
+    }
+
+    return {
+      accessToken,
+      refreshToken: asTrimmedString(payload.refresh_token) || '',
+      idToken: asTrimmedString(payload.id_token),
+      expiresIn: payload.expires_in,
+    }
+  } finally {
+    cleanup()
   }
 }
 
