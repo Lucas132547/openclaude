@@ -4172,7 +4172,6 @@ export function REPL({
     return () => {
       void diagnosticTracker.shutdown();
     };
-    // TODO: fix this
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

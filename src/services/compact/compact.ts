@@ -9,10 +9,7 @@ const sessionTranscriptModule = feature('KAIROS')
 
 import { APIUserAbortError } from '@anthropic-ai/sdk'
 import { markPostCompaction } from 'src/bootstrap/state.js'
-import {
-  getInvokedSkillsForAgent,
-  getOriginalCwd,
-} from '../../bootstrap/state.js'
+import { getInvokedSkillsForAgent } from '../../bootstrap/state.js'
 import type { QuerySource } from '../../constants/querySource.js'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
 import type { Tool, ToolUseContext } from '../../Tool.js'
@@ -41,7 +38,6 @@ import {
   getDeferredToolsDeltaAttachment,
   getMcpInstructionsDeltaAttachment,
 } from '../../utils/attachments.js'
-import { getMemoryPath } from '../../utils/config.js'
 import { COMPACT_MAX_OUTPUT_TOKENS } from '../../utils/context.js'
 import {
   analyzeContext,
@@ -59,7 +55,6 @@ import {
   executePreCompactHooks,
 } from '../../utils/hooks.js'
 import { logError } from '../../utils/log.js'
-import { MEMORY_TYPE_VALUES } from '../../utils/memory/types.js'
 import {
   createCompactBoundaryMessage,
   createUserMessage,
@@ -71,7 +66,7 @@ import {
 } from '../../utils/messages.js'
 import { expandPath } from '../../utils/path.js'
 import { getPlan, getPlanFilePath } from '../../utils/plans.js'
-import { getProjectInstructionFilePaths } from '../../utils/projectInstructions.js'
+import { isMemoryFilePath } from '../../utils/claudemd.js'
 import {
   isSessionActivityTrackingActive,
   sendSessionActivitySignal,
@@ -1688,24 +1683,9 @@ function shouldExcludeFromPostCompactRestore(
     // If we can't get plan file path, continue with other checks
   }
 
-  // Exclude all types of claude.md files
-  // TODO: Refactor to use isMemoryFilePath() from claudemd.ts for consistency
-  // and to also match child directory memory files (.claude/rules/*.md, etc.)
-  try {
-    const normalizedMemoryPaths = new Set(
-      MEMORY_TYPE_VALUES.filter(type => type !== 'Project').map(type =>
-        expandPath(getMemoryPath(type)),
-      ),
-    )
-    for (const path of getProjectInstructionFilePaths(getOriginalCwd())) {
-      normalizedMemoryPaths.add(expandPath(path))
-    }
-
-    if (normalizedMemoryPaths.has(normalizedFilename)) {
-      return true
-    }
-  } catch {
-    // If we can't get memory paths, continue
+  // Exclude all types of memory files (CLAUDE.md, AGENTS.md, CLAUDE.local.md, .claude/rules/*.md)
+  if (isMemoryFilePath(normalizedFilename)) {
+    return true
   }
 
   return false
