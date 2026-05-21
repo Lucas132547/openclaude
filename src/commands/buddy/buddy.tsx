@@ -82,7 +82,7 @@ function setCompanionReaction(
 
 function showHelp(onDone: LocalJSXCommandOnDone): void {
   onDone(
-    'Usage: /buddy [status|mute|unmute|rename|reroll]\n\nRun /buddy with no args to hatch your companion the first time, then pet it on later runs.\n\nXP Sources:\n  Bash success: +0.1 XP\n  Daily pet: +1 XP (first /buddy of the day)\n  Task completed: +3 XP\n\nCommands:\n  /buddy rename <name> — Cost: 5 XP, Requires Level 2\n  /buddy reroll — Cost: 15 XP',
+    'Usage: /buddy [status|mute|unmute|rename|reroll|brincar|alimentar|stats|help]\n\nRun /buddy with no args to hatch your companion the first time, then pet it on later runs.\n\nXP Sources:\n  Bash success: +0.1 XP\n  Daily pet: +1 XP (first /buddy of the day)\n  Task completed: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n\nCommands:\n  /buddy rename <name> — Cost: 5 XP, Requires Level 2\n  /buddy reroll — Cost: 15 XP\n  /buddy brincar — Brinque com seu buddy (cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy stats — Mostra estatísticas do buddy',
     { display: 'system' },
   )
 }
@@ -232,6 +232,95 @@ Mood: ${mood.emoji} "${mood.text}"`,
   }
 
   // --- END NEW COMMANDS ---
+
+  // Pet interactivo — brincar
+  if (arg === 'brincar') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
+      return null
+    }
+
+    const config = getGlobalConfig()
+    const lastBrincar = config.companionLastAction?.brincar ?? 0
+    const now = Date.now()
+    const cooldown = 60 * 60 * 1000 // 1 hora
+
+    if (now - lastBrincar < cooldown) {
+      const remaining = Math.ceil((cooldown - (now - lastBrincar)) / 60000)
+      onDone(`${companion.name} ainda está cansado da última brincadeira. Tente novamente em ${remaining} minutos.`, { display: 'system' })
+      return null
+    }
+
+    const reactions = [
+      `${companion.name} corre em círculos felizes! 🎾`,
+      `${companion.name} pula de alegria! 🦘`,
+      `${companion.name} faz uma dança engraçada! 💃`,
+      `${companion.name} rola no chão de barriga pra cima! 🤸`,
+      `${companion.name} brinca de esconde-esconde! 🫣`,
+    ]
+    const reaction = reactions[Math.floor(Date.now() / 1000) % reactions.length]!
+
+    saveGlobalConfig(current => ({
+      ...current,
+      companionLastAction: {
+        ...current.companionLastAction,
+        brincar: now,
+      },
+    }))
+
+    setCompanionReaction(context, reaction, true)
+    onDone(undefined, { display: 'skip' })
+    return null
+  }
+
+  // Pet interactivo — alimentar
+  if (arg === 'alimentar') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
+      return null
+    }
+
+    const config = getGlobalConfig()
+    const lastAlimentar = config.companionLastAction?.alimentar ?? 0
+    const now = Date.now()
+    const cooldown = 60 * 60 * 1000 // 1 hora
+
+    if (now - lastAlimentar < cooldown) {
+      const remaining = Math.ceil((cooldown - (now - lastAlimentar)) / 60000)
+      onDone(`${companion.name} não está com fome agora. Tente novamente em ${remaining} minutos.`, { display: 'system' })
+      return null
+    }
+
+    const reactions = [
+      `${companion.name} come com vontade! Yum! 🍕`,
+      `${companion.name} saboreia o lanche! 😋`,
+      `${companion.name} lambe os beiços! 🤤`,
+      `${companion.name} faz uma refeição deliciosa! 🍽️`,
+    ]
+    const reaction = reactions[Math.floor(Date.now() / 1000) % reactions.length]!
+
+    // +0.5 XP por alimentar
+    const xp = companion.xp ?? 0
+    const newXp = Math.round((xp + 0.5) * 10) / 10
+
+    saveGlobalConfig(current => ({
+      ...current,
+      companionLastAction: {
+        ...current.companionLastAction,
+        alimentar: now,
+      },
+      companion: current.companion ? {
+        ...current.companion,
+        xp: newXp,
+      } : undefined,
+    }))
+
+    setCompanionReaction(context, reaction, true)
+    onDone(undefined, { display: 'skip' })
+    return null
+  }
 
   if (arg === 'mute' || arg === 'unmute') {
     const muted = arg === 'mute'

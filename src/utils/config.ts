@@ -314,6 +314,7 @@ export type GlobalConfig = {
     totalPets: number
     daysActive: number
   }
+  companionLastAction?: Record<string, number>
 
   // Feedback survey tracking
   feedbackSurveyState?: {
