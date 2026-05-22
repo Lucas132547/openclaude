@@ -24,6 +24,21 @@ interface SidebarProps {
   onClose: () => void
 }
 
+function formatRelativeTime(ts: number): string {
+  const now = Date.now()
+  const diff = now - ts
+  const sec = Math.floor(diff / 1000)
+  if (sec < 60) return 'agora'
+  const min = Math.floor(sec / 60)
+  if (min < 60) return `${min}m`
+  const hours = Math.floor(min / 60)
+  if (hours < 24) return `${hours}h`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d`
+  const weeks = Math.floor(days / 7)
+  return `${weeks}sem`
+}
+
 function ConnectionSection() {
   const serverUrl = useSettingsStore((s: SettingsState) => s.serverUrl)
   const authToken = useSettingsStore((s: SettingsState) => s.authToken)
@@ -137,6 +152,7 @@ function ConversationsSection() {
           <div className="space-y-0.5">
             {conversations.map((conv: import('../types/chat').Conversation) => {
               const isActive = conv.id === sessionId
+              const timeAgo = conv.updatedAt ? formatRelativeTime(conv.updatedAt) : ''
               return (
                 <div
                   key={conv.id}
@@ -151,8 +167,8 @@ function ConversationsSection() {
                   <span className="text-xs text-ink-2 truncate flex-1">
                     {conv.title}
                   </span>
-                  <span className="text-xs text-quiet flex-shrink-0">
-                    {conv.messages.length}
+                  <span className="text-xs text-quiet flex-shrink-0" title={new Date(conv.updatedAt).toLocaleString('pt-BR')}>
+                    {timeAgo}
                   </span>
                   <button
                     onClick={(e) => {

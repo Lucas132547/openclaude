@@ -39,6 +39,7 @@ export interface ChatState {
   messages: ChatMessage[]
   isStreaming: boolean
   currentText: string
+  streamStartTime: number | null
   pendingPrompt: PendingPrompt | null
   sessionId: string
 
@@ -80,6 +81,7 @@ export const useChatStore = create<ChatState>((
   messages: [],
   isStreaming: false,
   currentText: '',
+  streamStartTime: null,
   pendingPrompt: null,
   sessionId: generateId(),
   conversations: [],
@@ -102,16 +104,29 @@ export const useChatStore = create<ChatState>((
     }),
 
   appendToCurrentText: (text) =>
-    set((s) => ({ currentText: s.currentText + text })),
+    set((s) => {
+      const newState: Partial<ChatState> = { currentText: s.currentText + text }
+      // Update assistant timestamp on first content arrival
+      if (s.currentText === '' && text) {
+        const msgs = [...s.messages]
+        const lastIdx = msgs.length - 1
+        if (lastIdx >= 0 && msgs[lastIdx].role === 'assistant' && msgs[lastIdx].timestamp === 0) {
+          msgs[lastIdx] = { ...msgs[lastIdx], timestamp: Date.now() }
+          newState.messages = msgs
+        }
+      }
+      return newState
+    }),
 
   startStreaming: () =>
     set({
       isStreaming: true,
       currentText: '',
+      streamStartTime: Date.now(),
       pendingPrompt: null,
     }),
 
-  stopStreaming: () => set({ isStreaming: false }),
+  stopStreaming: () => set({ isStreaming: false, currentText: '', streamStartTime: null }),
 
   setPendingPrompt: (prompt) => set({ pendingPrompt: prompt }),
 
@@ -156,13 +171,14 @@ export const useChatStore = create<ChatState>((
           tokenUsage: { prompt: promptTokens, completion: completionTokens },
         }
       }
-      // Save to conversations
+      // Save to conversations — preserve original createdAt
+      const existingConv = s.conversations.find((c) => c.id === s.sessionId)
       const conv: Conversation = {
         id: s.sessionId,
         title: s.messages.find((m) => m.role === 'user')?.content.slice(0, 60) || 'New conversation',
         messages: msgs,
         workingDirectory: '',
-        createdAt: Date.now(),
+        createdAt: existingConv?.createdAt ?? Date.now(),
         updatedAt: Date.now(),
       }
       const existing = s.conversations.filter((c) => c.id !== conv.id)
@@ -170,6 +186,7 @@ export const useChatStore = create<ChatState>((
         messages: msgs,
         isStreaming: false,
         currentText: '',
+        streamStartTime: null,
         conversations: [conv, ...existing].slice(0, 50),
       }
     }),
@@ -205,8 +222,8 @@ export const useChatStore = create<ChatState>((
     // Add user message to UI
     addMessage(makeMessage('user', text))
 
-    // Create placeholder assistant message for streaming
-    addMessage(makeMessage('assistant', ''))
+    // Create placeholder assistant message for streaming (timestamp 0 — will be set on first content)
+    addMessage({ id: generateId(), role: 'assistant', content: '', timestamp: 0, toolCalls: [] })
 
     startStreaming()
 
@@ -235,6 +252,6 @@ export const useChatStore = create<ChatState>((
     const { connection } = get()
     const msg: ClientMessage = { cancel: { reason: 'User cancelled' } }
     connection?.send(msg)
-    set({ isStreaming: false })
+    set({ isStreaming: false, streamStartTime: null })
   },
 }))
