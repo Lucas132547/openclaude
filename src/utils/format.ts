@@ -35,18 +35,18 @@ export function formatDuration(
   ms: number,
   options?: { hideTrailingZeros?: boolean; mostSignificantOnly?: boolean },
 ): string {
-  if (ms < 60000) {
-    // Special case for 0
-    if (ms === 0) {
-      return '0s'
+  // Guard against negative values (clock drift, race conditions)
+  if (ms <= 0) {
+    return '0s'
+  }
+
+  if (ms < 60_000) {
+    // Sub-minute: show 1 decimal for < 10s, integer otherwise
+    const sec = ms / 1000
+    if (sec < 10) {
+      return `${sec.toFixed(1)}s`
     }
-    // For durations < 1s, show 1 decimal place (e.g., 0.5s)
-    if (ms < 1) {
-      const s = (ms / 1000).toFixed(1)
-      return `${s}s`
-    }
-    const s = Math.floor(ms / 1000).toString()
-    return `${s}s`
+    return `${Math.floor(sec)}s`
   }
 
   let days = Math.floor(ms / 86400000)
