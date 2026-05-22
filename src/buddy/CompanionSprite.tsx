@@ -11,12 +11,14 @@ import { isFullscreenActive } from '../utils/fullscreen.js';
 import type { Theme } from '../utils/theme.js';
 import { getCompanion } from './companion.js';
 import { isBuddyEnabled } from './feature.js';
-import { renderFace, renderSprite, spriteFrameCount } from './sprites.js';
+import { getActiveOutfit } from './outfits.js';
+import { getOutfitStyle, renderFace, renderSprite, spriteFrameCount } from './sprites.js';
 import { RARITY_COLORS } from './types.js';
 const TICK_MS = 500;
 const BUBBLE_SHOW = 40; // ticks → ~20s at 500ms
 const FADE_WINDOW = 8; // last ~4s the bubble dims so you know it's about to go
 const PET_BURST_MS = 2500; // how long hearts float after /buddy pet
+const EVOLVE_BURST_MS = 3000; // how long the evolution blink animation lasts
 
 // Idle sequence: mostly rest (frame 0), occasional fidget (frames 1-2), rare blink.
 // Sequence indices map to sprite frames; -1 means "blink on frame 0".
@@ -24,7 +26,14 @@ const IDLE_SEQUENCE = [0, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 2, 0, 0, 0];
 
 // Hearts float up-and-out over 5 ticks (~2.5s). Prepended above the sprite.
 const H = figures.heart;
-const PET_HEARTS = [`   ${H}    ${H}   `, `  ${H}  ${H}   ${H}  `, ` ${H}   ${H}  ${H}   `, `${H}  ${H}      ${H} `, '·    ·   ·  '];
+const PET_HEARTS = [
+  `       ${H}       ${H}        `,
+  `     ${H}    ${H}     ${H}       `,
+  `    ${H}     ${H}     ${H}       `,
+  `   ${H}    ${H}         ${H}     `,
+  `  ${H}      ${H}           ${H}  `,
+  `·          ·          · `,
+];
 function wrap(text: string, width: number): string[] {
   const words = text.split(' ');
   const lines: string[] = [];
@@ -149,8 +158,8 @@ function SpeechBubble(t0) {
   }
   return t9;
 }
-export const MIN_COLS_FOR_FULL_SPRITE = 100;
-const SPRITE_BODY_WIDTH = 12;
+export const MIN_COLS_FOR_FULL_SPRITE = 120;
+const SPRITE_BODY_WIDTH = 24;
 const NAME_ROW_PAD = 2; // focused state wraps name in spaces: ` name `
 const SPRITE_PADDING_X = 2;
 const BUBBLE_WIDTH = 36; // SpeechBubble box (34) + tail column
@@ -176,11 +185,13 @@ export function companionReservedColumns(terminalColumns: number, speaking: bool
 export function CompanionSprite(): React.ReactNode {
   const reaction = useAppState(s => s.companionReaction);
   const petAt = useAppState(s => s.companionPetAt);
+  const evolvingAt = useAppState(s => s.companionEvolvingAt);
   const focused = useAppState(s => s.footerSelection === 'companion');
   const setAppState = useSetAppState();
   const {
-    columns
+    columns: terminalColumns
   } = useTerminalSize();
+  const columns = getGlobalConfig().companionCompact ? 0 : terminalColumns;
   const [tick, setTick] = useState(0);
   const lastSpokeTick = useRef(0);
   // Sync-during-render (not useEffect) so the first post-pet render already
@@ -196,6 +207,20 @@ export function CompanionSprite(): React.ReactNode {
     setPetStart({
       petStartTick: tick,
       forPetAt: petAt
+    });
+  }
+  // Evolution animation tracking
+  const [{
+    evolveStartTick,
+    forEvolvingAt
+  }, setEvolveStart] = useState({
+    evolveStartTick: 0,
+    forEvolvingAt: evolvingAt
+  });
+  if (evolvingAt !== forEvolvingAt) {
+    setEvolveStart({
+      evolveStartTick: tick,
+      forEvolvingAt: evolvingAt
     });
   }
   useEffect(() => {
@@ -215,12 +240,17 @@ export function CompanionSprite(): React.ReactNode {
   if (!isBuddyEnabled()) return null;
   const companion = getCompanion();
   if (!companion || getGlobalConfig().companionMuted) return null;
-  const color = RARITY_COLORS[companion.rarity];
+  const activeOutfit = getActiveOutfit();
+  const outfitStyle = getOutfitStyle(activeOutfit);
+  const rarityColor = RARITY_COLORS[companion.rarity];
+  const color = (outfitStyle?.keepRarityColor || !outfitStyle?.color) ? rarityColor : outfitStyle.color;
   const colWidth = spriteColWidth(stringWidth(companion.name));
   const bubbleAge = reaction ? tick - lastSpokeTick.current : 0;
   const fading = reaction !== undefined && bubbleAge >= BUBBLE_SHOW - FADE_WINDOW;
   const petAge = petAt ? tick - petStartTick : Infinity;
   const petting = petAge * TICK_MS < PET_BURST_MS;
+  const evolveAge = evolvingAt ? tick - evolveStartTick : Infinity;
+  const evolving = evolveAge * TICK_MS < EVOLVE_BURST_MS;
 
   // Narrow terminals: collapse to one-line face. When speaking, the quip
   // replaces the name beside the face (no room for a bubble).
@@ -241,13 +271,19 @@ export function CompanionSprite(): React.ReactNode {
   }
   const frameCount = spriteFrameCount(companion.species);
   const heartFrame = petting ? PET_HEARTS[petAge % PET_HEARTS.length] : null;
+  // Evolution: blink between visible and invisible every 2 ticks
+  const evolveBlink = evolving && evolveAge % 2 === 1;
   let spriteFrame: number;
   let blink = false;
-  if (reaction || petting) {
+  if (evolving) {
+    // Evolution: cycle all frames fast like excited, with blink overlay
+    spriteFrame = tick % frameCount;
+  } else if (reaction || petting) {
     // Excited: cycle all fidget frames fast
     spriteFrame = tick % frameCount;
   } else {
-    const step = IDLE_SEQUENCE[tick % IDLE_SEQUENCE.length]!;
+    const blinkMul = outfitStyle?.blinkSpeed ?? 1
+    const step = IDLE_SEQUENCE[(tick * blinkMul) % IDLE_SEQUENCE.length]!;
     if (step === -1) {
       spriteFrame = 0;
       blink = true;
@@ -255,16 +291,37 @@ export function CompanionSprite(): React.ReactNode {
       spriteFrame = step % frameCount;
     }
   }
-  const body = renderSprite(companion, spriteFrame).map(line => blink ? line.replaceAll(companion.eye, '-') : line);
-  const sprite = heartFrame ? [heartFrame, ...body] : body;
+  // Outfit effects: custom eye, extra lines, dim
+  const outfitEye = outfitStyle?.eye
+  const effectiveCompanion = outfitEye ? { ...companion, eye: outfitEye as any } : companion
+  // During evolution blink, render empty lines
+  const body = (evolveBlink
+    ? renderSprite(effectiveCompanion, spriteFrame).map(() => ' '.repeat(24))
+    : renderSprite(effectiveCompanion, spriteFrame)
+  ).map(line => {
+    const blinked = blink ? line.replaceAll(effectiveCompanion.eye, '-') : line;
+    if (outfitStyle?.symbol && blinked.trim()) {
+      return `${outfitStyle.symbol}${blinked}${outfitStyle.symbol}`;
+    }
+    return blinked;
+  });
+  // Add outfit extra lines
+  const extraTop = outfitStyle?.extraTop ?? []
+  const extraBottom = outfitStyle?.extraBottom ?? []
+  const sprite = [
+    ...extraTop,
+    ...(heartFrame ? [heartFrame, ...body] : body),
+    ...extraBottom,
+  ]
 
   // Name row doubles as hint row — unfocused shows dim name + ↓ discovery,
   // focused shows inverse name. The enter-to-open hint lives in
   // PromptInputFooter's right column so this row stays one line and the
   // sprite doesn't jump up when selected. flexShrink=0 stops the
   // inline-bubble row wrapper from squeezing the sprite to fit.
+  const isDim = outfitStyle?.dim ?? false
   const spriteColumn = <Box flexDirection="column" flexShrink={0} alignItems="center" width={colWidth}>
-      {sprite.map((line, i) => <Text key={i} color={i === 0 && heartFrame ? 'autoAccept' : color}>
+      {sprite.map((line, i) => <Text key={i} color={i === 0 && heartFrame ? 'autoAccept' : color} dimColor={isDim}>
           {line}
         </Text>)}
       <Text italic bold={focused} dimColor={!focused} color={focused ? color : undefined} inverse={focused}>

@@ -14,6 +14,8 @@ import {
   Check,
 } from 'lucide-react'
 import type { ToolCall } from '../types/chat'
+import { useChatStore, type ChatState } from '../stores/chatStore'
+import { useElapsedTime } from '../hooks/useElapsedTime'
 import { MarkdownRenderer } from './MarkdownRenderer'
 
 const toolIcons: Record<string, typeof Terminal> = {
@@ -138,6 +140,8 @@ export function ToolCallDisplay({ toolCall }: { toolCall: ToolCall }) {
   const bg = getToolBg(toolCall.state)
   const argsPreview = formatToolArgs(toolCall.arguments)
   const hasOutput = toolCall.output && toolCall.output.length > 0
+  const streamStartTime = useChatStore((s: ChatState) => s.streamStartTime)
+  const elapsed = useElapsedTime(streamStartTime, toolCall.state === 'running' && !hasOutput)
 
   return (
     <div className={`border rounded-md ${bg} my-1.5 animate-fade-in`}>
@@ -175,7 +179,7 @@ export function ToolCallDisplay({ toolCall }: { toolCall: ToolCall }) {
           {toolCall.state === 'running' && !hasOutput && (
             <div className="flex items-center gap-2 py-3 px-2 text-xs text-muted">
               <Loader2 size={12} className="animate-spin" />
-              <span>executing...</span>
+              <span>executing...{elapsed ? ` ${elapsed}` : ''}</span>
             </div>
           )}
           {hasOutput && (

@@ -1,10 +1,13 @@
 import { User, Bot, AlertCircle, Loader2 } from 'lucide-react'
 import type { ChatMessage } from '../types/chat'
+import { useChatStore, type ChatState } from '../stores/chatStore'
+import { useElapsedTime } from '../hooks/useElapsedTime'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { ToolCallDisplay } from './ToolCallDisplay'
 
 function formatTime(ts: number): string {
-  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  if (ts === 0) return ''
+  return new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
 interface MessageBubbleProps {
@@ -19,6 +22,8 @@ export function MessageBubble({ message, isStreaming, streamingText }: MessageBu
   const hasToolCalls = message.toolCalls.length > 0
   const content = isStreaming ? streamingText || '' : message.content
   const isEmpty = !content && !hasToolCalls && !isStreaming
+  const streamStartTime = useChatStore((s: ChatState) => s.streamStartTime)
+  const elapsed = useElapsedTime(streamStartTime, isStreaming === true && !content && !hasToolCalls)
 
   if (isEmpty) return null
 
@@ -91,7 +96,7 @@ export function MessageBubble({ message, isStreaming, streamingText }: MessageBu
         {isStreaming && !content && !hasToolCalls && (
           <div className="flex items-center gap-2 text-xs text-muted">
             <Loader2 size={12} className="animate-spin" />
-            <span>thinking...</span>
+            <span>thinking...{elapsed ? ` ${elapsed}` : ''}</span>
           </div>
         )}
       </div>

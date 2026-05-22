@@ -11,6 +11,13 @@ const MEMORY_TRIGGERS = {
   easterEgg: () => 'Encontrou um bug brilhante!',
   reroll: () => 'Mudou de aparência com um reroll!',
   rename: (name: string) => `Recebeu o nome "${name}"!`,
+  evolve: (from: string, to: string) => `Evoluiu de ${from} para ${to}!`,
+  konami: () => 'Ativou o Konami Code!',
+  petPremium: () => 'Ativou modo premium!',
+  doubleRainbow: () => '🌈🌈 DOUBLE RAINBOW!',
+  midnightEvolve: () => 'Evoluiu na meia-noite! Poder das trevas!',
+  loopInfinite: () => 'Sobreviveu a um loop infinito!',
+  answer42: () => 'Encontrou a resposta para tudo!',
 } as const
 
 export type MemoryTrigger = keyof typeof MEMORY_TRIGGERS
