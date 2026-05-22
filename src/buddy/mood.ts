@@ -13,6 +13,17 @@ export function getMood(): BuddyMood {
   const now = new Date()
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
+  // Premium mood
+  const premiumUntil = config.companion?.premiumUntil ?? 0
+  if (premiumUntil > Date.now()) {
+    const isEven = Math.floor(Date.now() / 60000) % 2 === 0
+    return {
+      emoji: isEven ? '🔥' : '⭐',
+      text: 'Modo premium ativado! Tô em chamas!',
+      mood: 'empolgado',
+    }
+  }
+
   // Sonolento: não pet hoje
   if (lastPetDate !== today) {
     return { emoji: '😴', text: 'Tô com sono... me dá um pet?', mood: 'sonolento' }

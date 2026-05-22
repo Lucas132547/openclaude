@@ -1,4 +1,5 @@
 import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js'
+import { getLevelInfo } from './progression.js'
 
 export type Outfit = {
   id: string
@@ -47,6 +48,70 @@ export const OUTFITS: Outfit[] = [
       return memories.some(m => m.trigger === 'easterEgg')
     },
   },
+  {
+    id: 'viking',
+    name: 'Viking',
+    description: 'Skin guerreira',
+    requirement: 'Completar 50 tasks e ter streak de 7 dias',
+    check: () =>
+      (getGlobalConfig().companionStats?.totalTasks ?? 0) >= 50 &&
+      (getGlobalConfig().companionStreakCount ?? 0) >= 7,
+  },
+  {
+    id: 'pixel-art',
+    name: 'Pixel Art',
+    description: 'Skin retro 8-bit',
+    requirement: 'Usar o OpenClaude por 100 horas',
+    check: () => ((getGlobalConfig() as any).totalHoursUsed ?? 0) >= 100,
+  },
+  {
+    id: 'invisivel',
+    name: 'Invisível',
+    description: 'Quase transparente',
+    requirement: 'Encontrar 5 easter eggs',
+    check: () => {
+      const memories = getGlobalConfig().companionMemory ?? []
+      const eggTriggers = ['easterEgg', 'konami', 'doubleRainbow', 'loopInfinite', 'answer42', 'midnightEvolve']
+      return memories.filter(m => eggTriggers.includes(m.trigger)).length >= 5
+    },
+  },
+  {
+    id: 'fogo',
+    name: 'Fogo',
+    description: 'Flamejante',
+    requirement: 'Streak de 60 dias',
+    check: () => (getGlobalConfig().companionStreakCount ?? 0) >= 60,
+  },
+  {
+    id: 'geladeira',
+    name: 'Geladeira',
+    description: 'Azul gelada',
+    requirement: 'Trabalhar em 3 projetos',
+    check: () => ((getGlobalConfig() as any).totalProjects ?? 0) >= 3,
+  },
+  {
+    id: 'hacker',
+    name: 'Hacker',
+    description: 'Terminal verde',
+    requirement: '1000 comandos bash',
+    check: () => (getGlobalConfig().companionStats?.totalBashes ?? 0) >= 1000,
+  },
+  {
+    id: 'festivo',
+    name: 'Festivo',
+    description: 'Confetti e balões',
+    requirement: 'Abrir o OpenClaude em dezembro',
+    check: () => new Date().getMonth() === 11,
+  },
+  {
+    id: 'ninja',
+    name: 'Ninja',
+    description: 'Stealth mode',
+    requirement: 'Completar 20 tasks sem erros',
+    check: () =>
+      (getGlobalConfig().companionStats?.totalTasks ?? 0) >= 20 &&
+      (getGlobalConfig().companionStats?.totalErrors ?? 0) === 0,
+  },
 ]
 
 export function getUnlockedOutfits(): string[] {
@@ -89,4 +154,95 @@ export function equipOutfit(outfitId: string): boolean {
   }))
 
   return true
+}
+
+export function getOutfitRequirements(): Array<{
+  id: string
+  name: string
+  description: string
+  requirement: string
+  unlocked: boolean
+}> {
+  const unlocked = new Set(getUnlockedOutfits())
+  return OUTFITS.map(o => ({
+    id: o.id,
+    name: o.name,
+    description: o.description,
+    requirement: o.requirement,
+    unlocked: unlocked.has(o.id),
+  }))
+}
+
+const LEVEL_HATS = [
+  { hat: 'beanie', level: 2 },
+  { hat: 'propeller', level: 3 },
+  { hat: 'tophat', level: 4 },
+  { hat: 'wizard', level: 5 },
+  { hat: 'pirate', level: 6 },
+  { hat: 'halo', level: 7 },
+  { hat: 'tinyduck', level: 8 },
+  { hat: 'chef', level: 9 },
+  { hat: 'crown', level: 10 },
+] as const
+
+export function getHatRequirements(): Array<{
+  hat: string
+  requirement: string
+  unlocked: boolean
+  source: 'level' | 'achievement'
+}> {
+  const config = getGlobalConfig()
+  const xp = config.companion?.xp ?? 0
+  const currentLevel = getLevelInfo(xp).level
+  const totalBashes = config.companionStats?.totalBashes ?? 0
+
+  const now = new Date()
+  const isDec25 = now.getMonth() === 11 && now.getDate() === 25
+
+  const hatchedAt = config.companion?.hatchedAt
+  const isHatchAnniversary = (() => {
+    if (!hatchedAt) return false
+    const hatched = new Date(hatchedAt)
+    return (
+      now.getMonth() === hatched.getMonth() &&
+      now.getDate() === hatched.getDate()
+    )
+  })()
+
+  const results: Array<{
+    hat: string
+    requirement: string
+    unlocked: boolean
+    source: 'level' | 'achievement'
+  }> = []
+
+  for (const { hat, level } of LEVEL_HATS) {
+    results.push({
+      hat,
+      requirement: `Alcançar nível ${level}`,
+      unlocked: currentLevel >= level,
+      source: 'level',
+    })
+  }
+
+  results.push({
+    hat: 'santa',
+    requirement: 'Abrir no dia 25 de dezembro',
+    unlocked: isDec25,
+    source: 'achievement',
+  })
+  results.push({
+    hat: 'party',
+    requirement: 'Aniversário do hatch do companion',
+    unlocked: isHatchAnniversary,
+    source: 'achievement',
+  })
+  results.push({
+    hat: 'headphones',
+    requirement: '500 comandos bash',
+    unlocked: totalBashes >= 500,
+    source: 'achievement',
+  })
+
+  return results
 }
