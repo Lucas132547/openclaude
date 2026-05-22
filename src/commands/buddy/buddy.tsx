@@ -2,14 +2,21 @@ import type { LocalJSXCommandContext, LocalJSXCommandOnDone } from '../../types/
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 import { getLevelInfo } from '../../buddy/progression.js'
 import { companionUserId, getCompanion, rollWithSeed } from '../../buddy/companion.js'
-import type { StoredCompanion, Companion } from '../../buddy/types.js'
+import type { StoredCompanion, Companion, CompanionBones } from '../../buddy/types.js'
+import { SPECIES } from '../../buddy/types.js'
+import { renderSprite, spriteFrameCount } from '../../buddy/sprites.js'
 import { pickDeterministic } from '../../buddy/hash.js'
 import { processStreak } from '../../buddy/streak.js'
 import { getMood } from '../../buddy/mood.js'
 import { getSessionSummary } from '../../buddy/skills.js'
 import { addReminder } from '../../buddy/reminders.js'
-import { OUTFITS, getUnlockedOutfits, getActiveOutfit, equipOutfit, checkAndUnlockOutfits } from '../../buddy/outfits.js'
+import { OUTFITS, getUnlockedOutfits, getActiveOutfit, equipOutfit, checkAndUnlockOutfits, getOutfitRequirements, getHatRequirements } from '../../buddy/outfits.js'
 import { addMemory, getMemories } from '../../buddy/memory.js'
+import { getEvolution, getEvolutionChain, getEvolutionTier } from '../../buddy/evolution.js'
+import { checkShinyBug, checkDoubleRainbow, checkMidnightEvolve } from '../../buddy/easter-eggs.js'
+import { getTodayJournal, formatJournal } from '../../buddy/journal.js'
+import { getSeasonalMessage } from '../../buddy/seasonal.js'
+import { getAchievementProgress } from '../../buddy/achievements.js'
 import { COMMON_HELP_ARGS, COMMON_INFO_ARGS } from '../../constants/xml.js'
 
 const NAME_PREFIXES = [
@@ -76,17 +83,19 @@ function setCompanionReaction(
   context: LocalJSXCommandContext,
   reaction: string | undefined,
   pet = false,
+  evolve = false,
 ): void {
   context.setAppState(prev => ({
     ...prev,
     companionReaction: reaction,
     companionPetAt: pet ? Date.now() : prev.companionPetAt,
+    companionEvolvingAt: evolve ? Date.now() : prev.companionEvolvingAt,
   }))
 }
 
 function showHelp(onDone: LocalJSXCommandOnDone): void {
   onDone(
-    'Uso: /buddy [status|mute|unmute|rename|reroll|brincar|alimentar|stats|outfits|equipar|resumo|lembrar|memorias|help]\n\nExecute /buddy sem argumentos para chocar seu companion na primeira vez, depois acaricie nas próximas.\n\nFontes de XP:\n  Bash com sucesso: +0.1 XP\n  Pet diário: +1 XP (primeiro /buddy do dia)\n  Task concluída: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n\nComandos:\n  /buddy rename <nome> — Custo: 5 XP, Requer Level 2\n  /buddy reroll — Custo: 15 XP\n  /buddy brincar — Brinque com seu buddy (cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)\n  /buddy outfits — Veja os outfits disponíveis\n  /buddy equipar <nome> — Equipe um outfit\n  /buddy lembrar <min> <texto> — Define um lembrete\n  /buddy memorias — Veja as memórias do seu buddy',
+    'Uso: /buddy [status|mute|unmute|compact|decompact|preview|rename|reroll|brincar|alimentar|stats|outfits|equipar|outfit|resumo|lembrar|memorias|evolve|requisitos|pet premium|help]\n\nExecute /buddy sem argumentos para chocar seu companion na primeira vez, depois acaricie nas próximas.\n\nFontes de XP:\n  Bash com sucesso: +0.1 XP\n  Pet diário: +1 XP (primeiro /buddy do dia)\n  Task concluída: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n  Easter eggs: +3 a +20 XP\n\nComandos:\n  /buddy rename <nome> — Custo: 5 XP, Requer Level 2\n  /buddy reroll — Custo: 15 XP\n  /buddy brincar — Brinque com seu buddy (cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy pet premium — Ativa modo premium 1h (1 XP)\n  /buddy outfit <nome> — Equipa outfit (2 XP)\n  /buddy evolve — Evolui species (50 XP, Level 5+)\n  /buddy compact — Modo compacto (face de 1 linha)\n  /buddy decompact — Modo completo (sprite 24x10)\n  /buddy preview — Mostra todas as espécies\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)\n  /buddy outfits — Veja os outfits disponíveis\n  /buddy equipar <nome> — Equipe um outfit\n  /buddy requisitos — Veja requisitos de outfits e chapéus\n  /buddy lembrar <min> <texto> — Define um lembrete\n  /buddy memorias — Veja as memórias do seu buddy\n  /buddy journal — Diário de hoje\n  /buddy achievements — Veja suas conquistas',
     { display: 'system' },
   )
 }
@@ -108,6 +117,38 @@ export async function call(
     }
   }
 
+  if (arg === 'preview') {
+    const defaultBones: CompanionBones = {
+      species: 'duck' as any,
+      eye: '·',
+      hat: 'none',
+      rarity: 'common',
+      shiny: false,
+      stats: { DEBUGGING: 0, PATIENCE: 0, CHAOS: 0, WISDOM: 0, SNARK: 0 },
+    }
+    const lines: string[] = []
+    for (const species of SPECIES) {
+      const bones = { ...defaultBones, species }
+      const frameCount = spriteFrameCount(species)
+      const frames: string[][] = []
+      for (let f = 0; f < frameCount; f++) {
+        frames.push(renderSprite(bones, f))
+      }
+      // Pad all frames to same height
+      const maxLines = Math.max(...frames.map(f => f.length))
+      for (const frame of frames) {
+        while (frame.length < maxLines) frame.unshift('')
+      }
+      lines.push(`\n=== ${species} ===`)
+      for (let row = 0; row < maxLines; row++) {
+        const rowParts = frames.map(f => (f[row] || '').padEnd(24))
+        lines.push(rowParts.join(' | '))
+      }
+    }
+    onDone(lines.join('\n'), { display: 'system' })
+    return null
+  }
+
   if (COMMON_INFO_ARGS.includes(arg) || arg === 'status') {
     const companion = getCompanion()
     if (!companion) {
@@ -121,12 +162,19 @@ export async function call(
     const mutedStatus = getGlobalConfig().companionMuted ? 'Silenciado' : 'Ouvindo'
     const xpDisplay = xp % 1 === 0 ? xp.toString() : xp.toFixed(1)
     const mood = getMood()
+    const premiumUntil = companion.premiumUntil ?? 0
+    const premiumActive = premiumUntil > Date.now()
+    const premiumDisplay = premiumActive ? ` (${Math.ceil((premiumUntil - Date.now()) / 60000)}min restantes)` : ''
+    const evolvedFrom = companion.evolvedFrom ? `\nEvolução: ${companion.evolvedFrom} → ${companion.species}` : ''
+    const tier = getEvolutionTier(companion.species)
+    const tierDisplay = tier > 0 ? ` [Tier ${tier}]` : ''
+
     onDone(
-      `Nome: ${companion.name} (${titleCase(companion.rarity)} ${companion.species})
+      `Nome: ${companion.name} (${titleCase(companion.rarity)} ${companion.species}${tierDisplay})
 Nível: ${levelInfo.level} (${xpDisplay} XP)
-Estado: ${mutedStatus}
+Estado: ${mutedStatus}${premiumDisplay ? ' | Premium 🔥' : ''}
 Personalidade: ${companion.personality}
-Humor: ${mood.emoji} "${mood.text}"`,
+Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
       { display: 'system' },
     )
     return null
@@ -444,6 +492,203 @@ Humor: ${mood.emoji} "${mood.text}"`,
     return null
   }
 
+  // Pet Premium: 1 XP, ativa modo premium por 1h
+  if (baseCommand === 'pet' && restArgs[0] === 'premium') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
+      return null
+    }
+
+    const xp = companion.xp ?? 0
+    if (xp < 1) {
+      onDone(`Pet premium custa 1 XP. Você só tem ${xp} XP.`, { display: 'system' })
+      return null
+    }
+
+    const now = Date.now()
+    const currentPremium = companion.premiumUntil ?? 0
+    if (currentPremium > now) {
+      const remaining = Math.ceil((currentPremium - now) / 60000)
+      onDone(`${companion.name} já está em modo premium! Restam ${remaining} minutos.`, { display: 'system' })
+      return null
+    }
+
+    saveGlobalConfig(current => ({
+      ...current,
+      companion: current.companion ? {
+        ...current.companion,
+        xp: Math.round((xp - 1) * 10) / 10,
+        premiumUntil: now + 3600000,
+      } : undefined,
+    }))
+
+    addMemory('petPremium')
+    setCompanionReaction(context, `${companion.name}: 🔥 Modo premium ativado! Tô em chamas por 1 hora!`, true)
+    onDone(`Modo premium ativado! Por 1 hora: Code Review com 90% chance, Dicas de Erro com 70% chance. (Custo: 1 XP)`, { display: 'system' })
+    return null
+  }
+
+  // Outfit com custo de XP: 2 XP para equipar
+  if (baseCommand === 'outfit') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
+      return null
+    }
+
+    const outfitName = restArgs.join(' ').trim().toLowerCase()
+    if (!outfitName) {
+      onDone('Uso: /buddy outfit <nome do outfit>\nCusto: 2 XP. Veja os disponíveis com /buddy outfits', { display: 'system' })
+      return null
+    }
+
+    const outfit = OUTFITS.find(o => o.name.toLowerCase() === outfitName || o.id === outfitName)
+    if (!outfit) {
+      onDone(`Outfit "${outfitName}" não encontrado. Use /buddy outfits para ver os disponíveis.`, { display: 'system' })
+      return null
+    }
+
+    const xp = companion.xp ?? 0
+    if (xp < 2) {
+      onDone(`Equipar outfit custa 2 XP. Você só tem ${xp} XP.`, { display: 'system' })
+      return null
+    }
+
+    if (!equipOutfit(outfit.id)) {
+      onDone(`${outfit.name} ainda não foi desbloqueado! Requisito: ${outfit.requirement}`, { display: 'system' })
+      return null
+    }
+
+    saveGlobalConfig(current => ({
+      ...current,
+      companion: current.companion ? {
+        ...current.companion,
+        xp: Math.round((xp - 2) * 10) / 10,
+      } : undefined,
+    }))
+
+    setCompanionReaction(context, `${companion.name}: Uau! Estou usando o outfit ${outfit.name}!`, true)
+    onDone(`Outfit ${outfit.name} equipado! (Custo: 2 XP)`, { display: 'system' })
+    return null
+  }
+
+  // Evolução: 50 XP, Level 5+, cadeia fixa
+  if (baseCommand === 'evolve') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
+      return null
+    }
+
+    const xp = companion.xp ?? 0
+    const levelInfo = getLevelInfo(xp)
+
+    if (levelInfo.level < 5) {
+      onDone(`Evolução requer Level 5. Seu buddy está no Level ${levelInfo.level}.`, { display: 'system' })
+      return null
+    }
+
+    if (xp < 50) {
+      onDone(`Evolução custa 50 XP. Você só tem ${xp} XP.`, { display: 'system' })
+      return null
+    }
+
+    const nextSpecies = getEvolution(companion.species)
+    if (!nextSpecies) {
+      onDone(`${companion.name} já está no estágio máximo de evolução!`, { display: 'system' })
+      return null
+    }
+
+    const currentSpecies = companion.species
+
+    // Easter Egg: Midnight Evolve
+    const midnightEvolve = checkMidnightEvolve()
+    const midnightBonus = midnightEvolve.triggered ? midnightEvolve.xpBonus! : 0
+    const totalCost = 50 - midnightBonus
+
+    saveGlobalConfig(current => ({
+      ...current,
+      companion: current.companion ? {
+        ...current.companion,
+        xp: Math.round((xp - totalCost) * 10) / 10,
+        species: nextSpecies as any,
+        evolvedFrom: currentSpecies,
+      } : undefined,
+    }))
+
+    addMemory('evolve', currentSpecies, nextSpecies)
+    if (midnightEvolve.triggered) {
+      addMemory('midnightEvolve')
+    }
+    setCompanionReaction(context, `${companion.name}: ✨ EVOLUÇÃO! ${currentSpecies} → ${nextSpecies}!${midnightEvolve.triggered ? ' 🌙' : ''}`, true, true)
+    onDone(
+      `Evolução completa! ${currentSpecies} → ${nextSpecies}! (Custo: ${totalCost} XP)` +
+      (midnightEvolve.triggered ? `\n🌙 ${midnightEvolve.message}` : ''),
+      { display: 'system' },
+    )
+    return null
+  }
+
+  // Journal: mostra diário de hoje
+  if (arg === 'journal') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
+      return null
+    }
+    const entry = getTodayJournal()
+    onDone(formatJournal(entry), { display: 'system' })
+    return null
+  }
+
+  // Achievements: mostra conquistas
+  if (arg === 'achievements' || arg === 'conquistas') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
+      return null
+    }
+    const progress = getAchievementProgress()
+    const unlocked = progress.filter(p => p.unlocked).length
+    const list = progress.map(p =>
+      `  ${p.unlocked ? '✅' : '🔒'} ${p.achievement.emoji} ${p.achievement.name} — ${p.achievement.description}`
+    ).join('\n')
+    onDone(
+      `🏆 Conquistas do ${companion.name} (${unlocked}/${progress.length}):\n${list}`,
+      { display: 'system' },
+    )
+    return null
+  }
+
+  // Requisitos: mostra progresso de outfits e chapéus
+  if (arg === 'requisitos') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
+      return null
+    }
+
+    const outfitReqs = getOutfitRequirements()
+    const hatReqs = getHatRequirements()
+
+    const outfitList = outfitReqs.map(o =>
+      `  ${o.unlocked ? '✅' : '🔒'} ${o.name} — ${o.requirement}`
+    ).join('\n')
+
+    const hatList = hatReqs.map(h =>
+      `  ${h.unlocked ? '✅' : '🔒'} ${h.hat} — ${h.requirement}`
+    ).join('\n')
+
+    onDone(
+      `📋 Requisitos do ${companion.name}\n\n` +
+      `🎨 Outfits:\n${outfitList}\n\n` +
+      `🎩 Chapéus:\n${hatList}`,
+      { display: 'system' },
+    )
+    return null
+  }
+
   if (arg === 'mute' || arg === 'unmute') {
     const muted = arg === 'mute'
     saveGlobalConfig(current => ({
@@ -457,6 +702,16 @@ Humor: ${mood.emoji} "${mood.text}"`,
       setCompanionReaction(context, `${companion?.name ?? 'Buddy'}: Voltei!`, true)
     }
     onDone(`Buddy ${muted ? 'silenciado' : 'reativado'}.`, { display: 'system' })
+    return null
+  }
+
+  if (arg === 'compact' || arg === 'decompact') {
+    const compact = arg === 'compact'
+    saveGlobalConfig(current => ({
+      ...current,
+      companionCompact: compact,
+    }))
+    onDone(`Buddy modo ${compact ? 'compacto' : 'completo'}.`, { display: 'system' })
     return null
   }
 
@@ -547,16 +802,37 @@ Humor: ${mood.emoji} "${mood.text}"`,
   if (streakResult.streak === 7) addMemory('streak7')
   if (streakResult.streak === 30) addMemory('streak30')
 
-  // Easter egg: 0.5% chance de bônus especial
-  if (Math.random() < 0.005) {
+  // Seasonal event
+  const seasonalMsg = getSeasonalMessage()
+  if (seasonalMsg) {
+    setCompanionReaction(context, `${companion.name}: ${seasonalMsg}`, true)
+  }
+
+  // Easter eggs
+  const shinyBug = checkShinyBug()
+  if (shinyBug.triggered) {
     const xp = getGlobalConfig().companion?.xp ?? 0
-    const newXp = Math.round((xp + 5) * 10) / 10
+    const newXp = Math.round((xp + shinyBug.xpBonus!) * 10) / 10
     saveGlobalConfig(current => ({
       ...current,
       companion: current.companion ? { ...current.companion, xp: newXp } : undefined,
     }))
     addMemory('easterEgg')
-    onDone(`✨ ${companion.name} encontrou um bug brilhante escondido! +5 XP bônus!`, { display: 'system' })
+    onDone(`✨ ${companion.name} ${shinyBug.message}`, { display: 'system' })
+    return null
+  }
+
+  // Double Rainbow: shiny + arco-íris
+  const doubleRainbow = checkDoubleRainbow(companion.shiny, getActiveOutfit())
+  if (doubleRainbow.triggered) {
+    const xp = getGlobalConfig().companion?.xp ?? 0
+    const newXp = Math.round((xp + doubleRainbow.xpBonus!) * 10) / 10
+    saveGlobalConfig(current => ({
+      ...current,
+      companion: current.companion ? { ...current.companion, xp: newXp } : undefined,
+    }))
+    addMemory('doubleRainbow')
+    onDone(`🌈 ${companion.name} ${doubleRainbow.message} +${doubleRainbow.xpBonus} XP!`, { display: 'system' })
     return null
   }
 
