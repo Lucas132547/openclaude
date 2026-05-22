@@ -50,6 +50,12 @@ export const mushroom = c(
   0x6d,
 ) as 'mushroom'
 export const chonk = c(0x63, 0x68, 0x6f, 0x6e, 0x6b) as 'chonk'
+export const lion = c(0x6c, 0x69, 0x6f, 0x6e) as 'lion'
+export const crab = c(0x63, 0x72, 0x61, 0x62) as 'crab'
+export const bear = c(0x62, 0x65, 0x61, 0x72) as 'bear'
+export const ufo = c(0x75, 0x66, 0x6f) as 'ufo'
+export const sprout = c(0x73, 0x70, 0x72, 0x6f, 0x75, 0x74) as 'sprout'
+export const bat = c(0x62, 0x61, 0x74) as 'bat'
 
 export const SPECIES = [
   duck,
@@ -70,6 +76,12 @@ export const SPECIES = [
   rabbit,
   mushroom,
   chonk,
+  lion,
+  crab,
+  bear,
+  ufo,
+  sprout,
+  bat,
 ] as const
 export type Species = (typeof SPECIES)[number] // biome-ignore format: keep compact
 
@@ -85,6 +97,11 @@ export const HATS = [
   'wizard',
   'beanie',
   'tinyduck',
+  'pirate',
+  'chef',
+  'santa',
+  'party',
+  'headphones',
 ] as const
 export type Hat = (typeof HATS)[number]
 
@@ -113,6 +130,9 @@ export type CompanionSoul = {
   personality: string
   xp?: number
   hat?: string
+  evolvedFrom?: string
+  konamiUsed?: boolean
+  premiumUntil?: number
 }
 
 export type Companion = CompanionBones &
@@ -126,6 +146,7 @@ export type Companion = CompanionBones &
 export type StoredCompanion = CompanionSoul & {
   hatchedAt: number
   seed?: string
+  species?: string
 }
 
 export const RARITY_WEIGHTS = {
