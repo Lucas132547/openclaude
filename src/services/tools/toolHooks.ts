@@ -3,6 +3,7 @@ import {
   logEvent,
 } from 'src/services/analytics/index.js'
 import { sanitizeToolNameForAnalytics } from 'src/services/analytics/metadata.js'
+import { logFeedbackEvent } from '../../memdir/feedbackLog.js'
 import type z from 'zod/v4'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
 import type { AnyObject, Tool, ToolUseContext } from '../../Tool.js'
@@ -55,6 +56,12 @@ export async function* runPostToolUseHooks<Input extends AnyObject, Output>(
   mcpServerBaseUrl: string | undefined,
 ): AsyncGenerator<PostToolUseHooksResult<Output>> {
   const postToolStartTime = Date.now()
+  void logFeedbackEvent({
+    type: 'outcome',
+    tool: tool.name,
+    success: true,
+  }, toolUseContext.agentId).catch(() => {})
+
   try {
     const appState = toolUseContext.getAppState()
     const permissionMode = appState.toolPermissionContext.mode
@@ -271,6 +278,13 @@ export async function* runPostToolUseFailureHooks<Input extends AnyObject>(
   MessageUpdateLazy<AttachmentMessage | ProgressMessage<HookProgress>>
 > {
   const postToolStartTime = Date.now()
+  void logFeedbackEvent({
+    type: 'outcome',
+    tool: tool.name,
+    success: false,
+    error,
+  }, toolUseContext.agentId).catch(() => {})
+
   try {
     const appState = toolUseContext.getAppState()
     const permissionMode = appState.toolPermissionContext.mode
