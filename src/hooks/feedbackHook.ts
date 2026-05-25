@@ -1,6 +1,14 @@
 import type { Message } from '../types/message.js'
 import { logFeedbackEvent } from '../memdir/feedbackLog.js'
 
+export type FeedbackDetectionResult = {
+  detected: boolean
+  type: 'correction' | 'undo'
+  file?: string
+  message: string
+  originalText?: string
+}
+
 const UNDO_PATTERNS = [
   /\bdesfaz(er)?\b/i,
   /\bdesfiz\b/i,
@@ -58,12 +66,7 @@ export async function detectAndLogFeedback(
   input: string,
   messages: Message[],
   sessionId?: string,
-): Promise<{
-  detected: boolean
-  message: string
-  file?: string
-  originalText?: string
-} | null> {
+): Promise<FeedbackDetectionResult | null> {
   if (!input || !messages) return null
 
   const lastEditedFiles = extractLastEditedFiles(messages)
@@ -98,6 +101,7 @@ export async function detectAndLogFeedback(
     if (matchedFile) {
       return {
         detected: true,
+        type: 'undo' as const,
         file: matchedFile,
         message: `[Feedback System] Notei que você desfez minha edição em \`${matchedFile}\`. Quer que eu salve isso como um padrão aprendido? Use "/feedback confirm" para registrar ou ignore.`,
       }
@@ -134,6 +138,7 @@ export async function detectAndLogFeedback(
 
     return {
       detected: true,
+      type: 'correction' as const,
       originalText,
       message: `[Feedback System] Notei uma correção: "${input}". Quer que eu salve isso como um padrão aprendido? Use "/feedback confirm" para registrar ou ignore.`,
     }
