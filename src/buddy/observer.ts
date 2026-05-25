@@ -234,7 +234,7 @@ export async function fireCompanionObserver(
     if (isError || isBashFailure) {
        incrementStat('totalErrors')
        onReaction(`${companion.name}: ${ERROR_REPLIES[Math.floor(Date.now() / 1000) % ERROR_REPLIES.length]!}`)
-       // Skill: dica contextual (Level 2+)
+       // Skill: dica contextual (85% chance, 98% premium)
        const premiumActive = (getGlobalConfig().companion?.premiumUntil ?? 0) > Date.now()
        const tip = getErrorTip(premiumActive, contentStr)
        if (tip) {
@@ -255,7 +255,7 @@ export async function fireCompanionObserver(
             onReaction(`${companion.name}: ${SUCCESS_REPLIES[Math.floor(Date.now() / 1000) % SUCCESS_REPLIES.length]!}`)
         }
 
-        // Skill: Code Review Buddy (30% chance, 90% with premium)
+        // Skill: Code Review Buddy (75% chance, 98% with premium)
         const premiumActive = (getGlobalConfig().companion?.premiumUntil ?? 0) > Date.now()
         const reviewTip = getCodeReviewTip(premiumActive, contentStr)
         if (reviewTip) {
