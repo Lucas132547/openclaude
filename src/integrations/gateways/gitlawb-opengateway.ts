@@ -16,15 +16,15 @@ export default defineGateway({
     kind: 'openai-compatible',
     openaiShim: {
       defaultAuthHeader: {
-        name: 'api-key',
-        scheme: 'raw',
+        name: 'Authorization',
+        scheme: 'bearer',
       },
       preserveReasoningContent: true,
       requireReasoningContentOnAssistantMessages: true,
       reasoningContentFallback: '',
       maxTokensField: 'max_completion_tokens',
       supportsApiFormatSelection: false,
-      supportsAuthHeaders: false,
+      supportsAuthHeaders: true,
     },
   },
   preset: {
