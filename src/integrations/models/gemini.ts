@@ -24,6 +24,8 @@ function geminiModel(id: string, label: string, maxOutputTokens: number) {
 }
 
 export default [
+  geminiModel('gemini-3.5-flash', 'Gemini 3.5 Flash', 65_536),
+  geminiModel('google/gemini-3.5-flash', 'Google Gemini 3.5 Flash', 65_536),
   geminiModel('gemini-3.1-flash-lite-preview', 'Gemini 3.1 Flash Lite Preview', 65_536),
   geminiModel('gemini-3.1-pro-preview', 'Gemini 3.1 Pro Preview', 65_536),
   geminiModel('gemini-2.5-flash', 'Gemini 2.5 Flash', 65_536),

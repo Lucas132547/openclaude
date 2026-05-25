@@ -345,6 +345,11 @@ function getGeminiModelOptions(): ModelOption[] {
       description: 'Balanced performance · Best for everyday coding tasks',
     },
     {
+      value: 'gemini-3.5-flash',
+      label: 'Gemini 3.5 Flash',
+      description: 'Ultra-fast & highly capable · Latest Gemini model',
+    },
+    {
       value: 'gemini-3-flash-preview',
       label: 'Gemini 3 Flash',
       description: 'High speed · Optimal for fast iterative development',
