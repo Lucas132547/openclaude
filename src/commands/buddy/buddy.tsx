@@ -10,7 +10,7 @@ import { processStreak } from '../../buddy/streak.js'
 import { getMood } from '../../buddy/mood.js'
 import { getSessionSummary } from '../../buddy/skills.js'
 import { addReminder } from '../../buddy/reminders.js'
-import { OUTFITS, getUnlockedOutfits, getActiveOutfit, equipOutfit, checkAndUnlockOutfits, getOutfitRequirements, getHatRequirements } from '../../buddy/outfits.js'
+import { OUTFITS, getUnlockedOutfits, getActiveOutfit, equipOutfit, equipHat, checkAndUnlockOutfits, getOutfitRequirements, getHatRequirements } from '../../buddy/outfits.js'
 import { addMemory, getMemories } from '../../buddy/memory.js'
 import { getEvolution, getEvolutionChain, getEvolutionTier } from '../../buddy/evolution.js'
 import { checkShinyBug, checkDoubleRainbow, checkMidnightEvolve } from '../../buddy/easter-eggs.js'
@@ -95,7 +95,7 @@ function setCompanionReaction(
 
 function showHelp(onDone: LocalJSXCommandOnDone): void {
   onDone(
-    'Uso: /buddy [status|mute|unmute|compact|decompact|preview|rename|reroll|brincar|alimentar|stats|outfits|equipar|outfit|resumo|lembrar|memorias|evolve|requisitos|pet premium|help]\n\nExecute /buddy sem argumentos para chocar seu companion na primeira vez, depois acaricie nas próximas.\n\nFontes de XP:\n  Bash com sucesso: +0.1 XP\n  Pet diário: +1 XP (primeiro /buddy do dia)\n  Task concluída: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n  Easter eggs: +3 a +20 XP\n\nComandos:\n  /buddy rename <nome> — Custo: 5 XP, Requer Level 2\n  /buddy reroll — Custo: 15 XP\n  /buddy brincar — Brinque com seu buddy (cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy pet premium — Ativa modo premium 1h (1 XP)\n  /buddy outfit <nome> — Equipa outfit (2 XP)\n  /buddy evolve — Evolui species (50 XP, Level 5+)\n  /buddy compact — Modo compacto (face de 1 linha)\n  /buddy decompact — Modo completo (sprite 24x10)\n  /buddy preview — Mostra todas as espécies\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)\n  /buddy outfits — Veja os outfits disponíveis\n  /buddy equipar <nome> — Equipe um outfit\n  /buddy requisitos — Veja requisitos de outfits e chapéus\n  /buddy lembrar <min> <texto> — Define um lembrete\n  /buddy memorias — Veja as memórias do seu buddy\n  /buddy journal — Diário de hoje\n  /buddy achievements — Veja suas conquistas',
+    'Uso: /buddy [status|mute|unmute|compact|decompact|preview|rename|reroll|brincar|alimentar|stats|outfits|equipar|outfit|resumo|lembrar|memorias|evolve|requisitos|pet premium|help]\n\nExecute /buddy sem argumentos para chocar seu companion na primeira vez, depois acaricie nas próximas.\n\nFontes de XP:\n  Bash com sucesso: +0.1 XP\n  Pet diário: +1 XP (primeiro /buddy do dia)\n  Task concluída: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n  Easter eggs: +3 a +20 XP\n\nComandos:\n  /buddy rename <nome> — Custo: 5 XP, Requer Level 2\n  /buddy reroll — Custo: 15 XP\n  /buddy brincar — Brinque com seu buddy (cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy pet premium — Ativa modo premium 1h (1 XP)\n  /buddy outfit <nome> — Equipa outfit (2 XP)\n  /buddy evolve — Evolui species (50 XP, Level 5+)\n  /buddy compact — Modo compacto (face de 1 linha)\n  /buddy decompact — Modo completo (sprite 24x10)\n  /buddy preview — Mostra todas as espécies\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)\n  /buddy outfits — Veja os outfits disponíveis\n  /buddy equipar <nome> — Equipe um outfit\n  /buddy chapeu <nome> — Troque seu chapéu\n  /buddy requisitos — Veja requisitos de outfits e chapéus\n  /buddy lembrar <min> <texto> — Define um lembrete\n  /buddy memorias — Veja as memórias do seu buddy\n  /buddy journal — Diário de hoje\n  /buddy achievements — Veja suas conquistas',
     { display: 'system' },
   )
 }
@@ -489,6 +489,36 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
 
     setCompanionReaction(context, `${companion.name}: Uau! Estou usando o outfit ${outfit.name}!`, true)
     onDone(`Outfit ${outfit.name} equipado!`, { display: 'system' })
+    return null
+  }
+
+  // Chapéu: equipa chapéu desbloqueado
+  if (baseCommand === 'chapeu' || baseCommand === 'chapéu') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
+      return null
+    }
+
+    const hatName = restArgs.join(' ').trim().toLowerCase()
+    if (!hatName) {
+      const hatReqs = getHatRequirements()
+      const currentHat = companion.hat ?? 'none'
+      const list = hatReqs.map(h => {
+        const equipped = h.hat === currentHat ? ' ✅ (equipado)' : ''
+        return `  ${h.unlocked ? '🔓' : '🔒'} ${h.hat} — ${h.requirement}${equipped}`
+      }).join('\n')
+      onDone(`🎩 Chapéus do ${companion.name}:\n${list}\n\nUse /buddy chapeu <nome> para equipar.`, { display: 'system' })
+      return null
+    }
+
+    if (!equipHat(hatName)) {
+      onDone(`Chapéu "${hatName}" não disponível ou ainda não desbloqueado. Use /buddy chapeu para ver os disponíveis.`, { display: 'system' })
+      return null
+    }
+
+    setCompanionReaction(context, `${companion.name}: Uau! Estou usando o chapéu ${hatName}!`, true)
+    onDone(`Chapéu ${hatName} equipado!`, { display: 'system' })
     return null
   }
 

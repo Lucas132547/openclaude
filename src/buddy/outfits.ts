@@ -156,6 +156,17 @@ export function equipOutfit(outfitId: string): boolean {
   return true
 }
 
+export function equipHat(hat: string): boolean {
+  const hatReqs = getHatRequirements()
+  const match = hatReqs.find(h => h.hat === hat && h.unlocked)
+  if (!match) return false
+  saveGlobalConfig(curr => ({
+    ...curr,
+    companion: curr.companion ? { ...curr.companion, hat } : undefined,
+  }))
+  return true
+}
+
 export function getOutfitRequirements(): Array<{
   id: string
   name: string
