@@ -124,7 +124,7 @@ Alimenta o companion.
 Ativa o modo premium por 1 hora.
 
 - **Custo:** 1 XP
-- **Efeito:** Code Review com 90% de chance (normal: 30%), Dicas de Erro com 70% (normal: 10%)
+- **Efeito:** Code Review com 98% de chance (normal: 75%), Dicas de Erro com 98% (normal: 85%)
 - **Cooldown:** 1 hora (não acumula)
 - **Visual:** Emoji 🔥/⭐ alternando, mood premium
 
@@ -283,17 +283,65 @@ Para manter a cor da raridade mesmo com outfit ativo, use `keepRarityColor: true
 
 Quando um bash falha, o companion pode mostrar uma dica contextual.
 
-- **Chance:** 10% (normal), 70% (premium)
-- **Lógica:** Analisa a mensagem de erro e escolhe a dica mais relevante
-- **Categorias:** arquivo, permissão, sintaxe, rede, dependência, git, build, teste
+- **Chance:** 85% (normal), 98% (premium)
+- **Lógica:** Analisa a mensagem de erro e escolhe a dica mais relevante.
+
+#### Categorias de Diagnóstico de Erros (19)
+
+| Categoria                   | Padrões de Texto Detectados (Regex)                                       | Exemplo de Dica do Buddy                                                               |
+| :-------------------------- | :------------------------------------------------------------------------ | :------------------------------------------------------------------------------------- |
+| **Dependência**             | `cannot find module`, `module not found`, `missing dependency`, `npm err` | "Roda `npm install` ou `yarn` pra instalar as dependências."                           |
+| **Arquivo**                 | `enoent`, `no such file`, `não encontrado`, `file not found`              | "Já conferiu se o arquivo existe e o caminho está correto?"                            |
+| **Permissão**               | `permission`, `eacces`, `eperm`, `acesso negado`, `forbidden`             | "Pode ser permissão de arquivo. Tenta `chmod` ou `sudo`."                              |
+| **Sintaxe**                 | `syntax`, `unexpected`, `parse`, `syntaxerror`                            | "Erro de sintaxe! Confere parênteses, chaves e vírgulas."                              |
+| **Rede**                    | `econnrefused`, `timeout`, `fetch failed`, `socket hang up`               | "Parece ser problema de rede. O servidor tá rodando?"                                  |
+| **Merge/Conflito**          | `merge conflict`, `CONFLICT`                                              | "Conflito de merge! Abre o arquivo e resolve os marcadores `<<<<<<<`."                 |
+| **Git / Repos**             | `git detached`, `not a git repository`, `nothing to commit`, `rebase`     | "Parece problema com git. `git status` mostra o estado atual."                         |
+| **Build & TS**              | `build failed`, `compilation`, `type error`, `typescript`                 | "Erro de tipo! Confere os tipos das variáveis e parâmetros."                           |
+| **Testes**                  | `test fail`, `assertion`, `expect`, `jest`, `vitest`                      | "Teste falhou! Lê a mensagem de erro pra entender o esperado vs atual."                |
+| **Porta em Uso**            | `port in use`, `eaddrinuse`, `address already in use`                     | "Porta já em uso! `lsof -i :<porta>` pra ver quem tá usando."                          |
+| **Falta de Memória**        | `out of memory`, `heap limit`, `javascript heap`, `oom`                   | "Falta de memória! Tenta aumentar: `NODE_OPTIONS=--max-old-space-size=4096`."          |
+| **Disco Cheio**             | `no space left`, `disk full`, `ENOSPC`                                    | "Disco cheio! `df -h` pra ver o uso."                                                  |
+| **Variáveis de Env**        | `env not defined`, `missing env`, `dotenv`, `.env`                        | "Variável de ambiente não definida! Confere o `.env`."                                 |
+| **CORS**                    | `cors`, `access-control`, `blocked by cors`                               | "Erro de CORS! Configura os headers no servidor."                                      |
+| **SSL/Certificado**         | `ssl`, `certificate`, `cert`, `TLS`, `self.signed`                        | "Erro de SSL/Certificado! Confere se o cert é válido e não expirou."                   |
+| **Docker**                  | `docker not found`, `cannot connect docker`, `daemon`                     | "Docker não tá rodando? `docker info` pra checar."                                     |
+| **Linting**                 | `eslint`, `prettier`, `lint`                                              | "Erro de lint! `npx eslint . --fix` pra corrigir auto."                                |
+| **Banco de Dados** _(Nova)_ | `postgres`, `psql`, `mongodb`, `redis`, `sqlite`, `prisma`                | "Erro de banco de dados! O serviço do PostgreSQL/MongoDB/Redis tá rodando localmente?" |
+| **CI/CD & Deploy** _(Nova)_ | `action`, `workflow`, `pipeline`, `job`, `vercel`, `netlify`              | "O deploy falhou no pipeline! Confere o log completo da action ou da plataforma."      |
+
+---
 
 ### Code Review Buddy (Level 2+)
 
 Após um bash bem-sucedido, o companion pode sugerir melhorias.
 
-- **Chance:** 30% (normal), 90% (premium)
-- **Lógica:** Analisa o comando executado e sugere boas práticas
-- **Categorias:** git, npm/yarn, build, teste, docker, rm, curl, sudo
+- **Chance:** 75% (normal), 98% (premium)
+- **Lógica:** Analisa o comando executado e sugere boas práticas.
+
+#### Categorias de Revisão de Código e Comandos (19)
+
+| Categoria                   | Padrões de Comando Correspondidos (Regex)                        | Exemplo de Sugestão / Boas Práticas                                                       |
+| :-------------------------- | :--------------------------------------------------------------- | :---------------------------------------------------------------------------------------- |
+| **Banco de Dados** _(Nova)_ | `prisma`, `migrate`, `psql`, `mongosh`, `redis-cli`, `sequelize` | "Sempre faça backup do banco de dados de produção antes de rodar migrations destrutivas!" |
+| **Frontend & Dev** _(Nova)_ | `vite`, `next`, `astro`, `webpack`, `npm run dev`, `bun dev`     | "Para imagens mais rápidas e otimizadas, prefira formatos modernos como WebP ou AVIF."    |
+| **Lint & Formato** _(Nova)_ | `eslint`, `prettier`, `lint`                                     | "Prettier garante formatação consistente. Configure o VS Code para 'Format on Save'."     |
+| **Git Add/Commit/Push**     | `git add`, `git commit`, `git push`                              | "Antes de commitar, roda `git diff --cached` pra ver o que tá staged."                    |
+| **Git Branch**              | `git checkout`, `git switch`, `git branch`                       | "Conferiu se tá no branch certo antes de começar?"                                        |
+| **Git Pull/Fetch/Rebase**   | `git pull`, `git fetch`, `git rebase`                            | "Pull com rebase mantém histórico linear: `git pull --rebase`."                           |
+| **Instalação de Pacotes**   | `npm install`, `yarn add`, `pnpm add`, `bun add`                 | "Conferiu se a versão do pacote é compatível com o projeto?"                              |
+| **Build do Projeto**        | `npm run build`, `yarn build`, `make`                            | "Se o build passou, que tal rodar os testes antes de commitar?"                           |
+| **Execução de Testes**      | `npm test`, `jest`, `vitest`, `pytest`, `cargo test`             | "Se os testes passaram, tá quase pronto! Só falta revisar o diff."                        |
+| **Docker & Containers**     | `docker`, `docker-compose`, `podman`                             | "Conferiu se o Dockerfile tá otimizado com multi-stage build?"                            |
+| **Exclusão de Arquivos**    | `rm -rf`, `rm -r`, `del`, `rmdir`                                | "Cuidado com `rm -rf`! Confere o caminho antes de rodar."                                 |
+| **Requisições de Rede**     | `curl`, `wget`, `fetch`                                          | "Conferiu se a URL é HTTPS e não HTTP?"                                                   |
+| **Permissões & Admin**      | `chmod`, `chown`, `sudo`                                         | "Cuidado com `sudo`! Tem certeza que precisa de privilégios de admin?"                    |
+| **Gestão de Pastas**        | `cd `, `mkdir`, `cp `, `mv `                                     | "`mkdir -p` cria diretórios pai sem erro se já existirem."                                |
+| **Execução Node/TS**        | `npx`, `node `, `ts-node`, `tsx`                                 | "ts-node vs tsx: tsx é mais rápido pra scripts, ts-node pra debug."                       |
+| **Dependências Python**     | `pip install`, `poetry`, `pipenv`                                | "Usa virtualenv pra isolar dependências Python."                                          |
+| **Rust & Cargo**            | `cargo`, `rustc`                                                 | "Clippy (`cargo clippy`) pega patterns inseguros que o compilador ignora."                |
+| **Linguagem Go**            | `go run`, `go build`, `go test`, `go mod`                        | "Go mod tidy limpa dependências não usadas."                                              |
+| **GitHub CLI**              | `gh pr`, `gh issue`, `gh repo`                                   | "PR pronto? Confere se CI tá verde antes de pedir review."                                |
 
 ### Resumo da Sessão (Level 4+)
 
@@ -410,8 +458,8 @@ O companion reage automaticamente a eventos:
 
 | Evento               | Reação                                             |
 | -------------------- | -------------------------------------------------- |
-| Bash com sucesso     | 20% chance de reação positiva + Code Review (30%)  |
-| Bash com erro        | Sempre reage + dica contextual (10%, 70% premium)  |
+| Bash com sucesso     | 20% chance de reação positiva + Code Review (75%)  |
+| Bash com erro        | Sempre reage + dica contextual (85%, 98% premium)  |
 | Task concluída       | Reação de celebração + XP                          |
 | Git status           | Avisa sobre commits pendentes ou branch divergente |
 | Menciona o companion | Reage quando você fala o nome dele                 |
