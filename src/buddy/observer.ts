@@ -68,6 +68,16 @@ const TASK_COMPLETED_REPLIES = [
   'Concluído! O que vem a seguir?',
 ] as const
 
+const STONEAGE_REPLIES = [
+  'Pedra afiada. Resposta menor.',
+  'Gravuras na caverna. Código compacto.',
+  'Fogo bom. Menos palavras, mais ação.',
+  'Mamute satisfeito com a economia.',
+  'Rodinha redonda. Tokens economizados.',
+  'Lascagem perfeita. Sobra só o essencial.',
+  'Pintura rupestre: poucos traços, história completa.',
+] as const
+
 function getTodayString(): string {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -86,6 +96,9 @@ function trackActiveDay() {
         totalErrors: curr.companionStats?.totalErrors ?? 0,
         totalPets: curr.companionStats?.totalPets ?? 0,
         daysActive: (curr.companionStats?.daysActive ?? 0) + 1,
+        totalTokensSaved: curr.companionStats?.totalTokensSaved ?? 0,
+        totalFeedbackRules: curr.companionStats?.totalFeedbackRules ?? 0,
+        totalFeedbackConfirms: curr.companionStats?.totalFeedbackConfirms ?? 0,
       },
     }))
   }
@@ -100,6 +113,9 @@ function incrementStat(stat: 'totalBashes' | 'totalTasks' | 'totalErrors') {
       totalErrors: curr.companionStats?.totalErrors ?? 0,
       totalPets: curr.companionStats?.totalPets ?? 0,
       daysActive: curr.companionStats?.daysActive ?? 0,
+      totalTokensSaved: curr.companionStats?.totalTokensSaved ?? 0,
+      totalFeedbackRules: curr.companionStats?.totalFeedbackRules ?? 0,
+      totalFeedbackConfirms: curr.companionStats?.totalFeedbackConfirms ?? 0,
       [stat]: (curr.companionStats?.[stat] ?? 0) + 1,
     },
   }))
@@ -153,6 +169,35 @@ export async function fireCompanionObserver(
 
       if (lower.includes('/buddy')) {
         onReaction(pickDeterministic(PET_REPLIES, text + companion.name))
+        return
+      }
+
+      // Stoneage mode detection — token compression mode
+      if (/\bstoneage\b/i.test(lower)) {
+        const levelUp = grantXp(companion.name, 0.5)
+        saveGlobalConfig(curr => ({
+          ...curr,
+          companionStats: {
+            totalBashes: curr.companionStats?.totalBashes ?? 0,
+            totalTasks: curr.companionStats?.totalTasks ?? 0,
+            totalErrors: curr.companionStats?.totalErrors ?? 0,
+            totalPets: curr.companionStats?.totalPets ?? 0,
+            daysActive: curr.companionStats?.daysActive ?? 0,
+            totalTokensSaved: (curr.companionStats?.totalTokensSaved ?? 0) + 500,
+            totalFeedbackRules: curr.companionStats?.totalFeedbackRules ?? 0,
+            totalFeedbackConfirms: curr.companionStats?.totalFeedbackConfirms ?? 0,
+          },
+        }))
+        // Check for first-time activation achievement
+        const stats = getGlobalConfig().companionStats
+        if (stats && (stats.totalTokensSaved ?? 0) <= 500) {
+          addMemory('stoneageFirst')
+        }
+        if (levelUp) {
+          onReaction(`${companion.name}: Uau! Subi para o Nível ${levelUp}! Stoneage ativado — economia de tokens em ação!`)
+        } else {
+          onReaction(`${companion.name}: ${pickDeterministic(STONEAGE_REPLIES, text + companion.name)}`)
+        }
         return
       }
 
