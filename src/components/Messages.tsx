@@ -12,7 +12,8 @@ import { BLACK_CIRCLE } from '../constants/figures.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
 import type { ScrollBoxHandle } from '../ink/components/ScrollBox.js';
 import { useTerminalNotification } from '../ink/useTerminalNotification.js';
-import { Box, Text, Ansi } from '../ink.js';
+import { Box, Text } from '../ink.js';
+import { RawAnsi } from '../ink.js';
 import { useShortcutDisplay } from '../keybindings/useShortcutDisplay.js';
 import type { Screen } from '../screens/REPL.js';
 import type { Tools } from '../Tool.js';
@@ -55,8 +56,8 @@ import type { JumpHandle } from './VirtualMessageList.js';
 // subscribe to useAppState/useSettings for their own updates.
 const LogoHeader = React.memo(function LogoHeader(t0: { agentDefinitions?: AgentDefinitionsResult }) {
   const { agentDefinitions } = t0;
-  const text = useMemo(() => getStartupScreenText(), []);
-  return <OffscreenFreeze><Box flexDirection="column" gap={1}><Ansi>{text}</Ansi><React.Suspense fallback={null}><StatusNotices agentDefinitions={agentDefinitions} /></React.Suspense></Box></OffscreenFreeze>;
+  const lines = useMemo(() => getStartupScreenText(), []);
+  return <OffscreenFreeze><Box flexDirection="column" gap={1}><RawAnsi lines={lines} width={62} /><React.Suspense fallback={null}><StatusNotices agentDefinitions={agentDefinitions} /></React.Suspense></Box></OffscreenFreeze>;
 });
 
 // Dead code elimination: conditional import for proactive mode
