@@ -33,7 +33,6 @@ import { plural } from '../utils/stringUtils.js';
 import { renderableSearchText } from '../utils/transcriptSearch.js';
 import { Divider } from './design-system/Divider.js';
 import { getStartupScreenText } from './StartupScreen.js';
-import { useMainLoopModel } from '../hooks/useMainLoopModel.js';
 import type { UnseenDivider } from './FullscreenLayout.js';
 import { LogoV2 } from './LogoV2/LogoV2.js';
 import { StreamingMarkdown } from './Markdown.js';
@@ -56,8 +55,7 @@ import type { JumpHandle } from './VirtualMessageList.js';
 // subscribe to useAppState/useSettings for their own updates.
 const LogoHeader = React.memo(function LogoHeader(t0: { agentDefinitions?: AgentDefinitionsResult }) {
   const { agentDefinitions } = t0;
-  const model = useMainLoopModel();
-  const text = useMemo(() => getStartupScreenText(model), [model]);
+  const text = useMemo(() => getStartupScreenText(), []);
   return <OffscreenFreeze><Box flexDirection="column" gap={1}><Ansi>{text}</Ansi><React.Suspense fallback={null}><StatusNotices agentDefinitions={agentDefinitions} /></React.Suspense></Box></OffscreenFreeze>;
 });
 
