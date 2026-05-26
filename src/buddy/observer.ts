@@ -1,5 +1,6 @@
 import { execSync } from 'child_process'
 import type { Message } from '../types/message.js'
+import type { FeedbackDetectionResult } from '../hooks/feedbackHook.js'
 import { saveGlobalConfig, getGlobalConfig } from '../utils/config.js'
 import { getUserMessageText } from '../utils/messages.js'
 import { getCompanion } from './companion.js'
@@ -66,6 +67,24 @@ const TASK_COMPLETED_REPLIES = [
   'Missão cumprida.',
   'Uma etapa a menos para a glória.',
   'Concluído! O que vem a seguir?',
+] as const
+
+const FEEDBACK_CORRECTION_REPLIES = [
+  'Hmm, vou anotar isso para nao errar de novo...',
+  'Entendi! Deixa eu registrar essa regra.',
+  'Opa, correcao recebida. Aprendendo!',
+  'Puxa, desculpe! Vou memorizar isso.',
+] as const
+
+const FEEDBACK_UNDO_REPLIES = [
+  'Ops, desfiz algo errado? Vou anotar.',
+  'Revertido! Vou lembrar da proxima vez.',
+] as const
+
+const FEEDBACK_CONFIRM_REPLIES = [
+  'Regra consolidada! +2 XP',
+  'Aprendizado confirmado! Estou mais inteligente agora.',
+  'Memoria fortalecida! Obrigado por confirmar.',
 ] as const
 
 const STONEAGE_REPLIES = [
@@ -152,6 +171,7 @@ function grantXp(companionName: string, amount: number): number | null {
 export async function fireCompanionObserver(
   messages: Message[],
   onReaction: (reaction: string | undefined) => void,
+  feedbackResult?: FeedbackDetectionResult,
 ): Promise<void> {
   const companion = getCompanion()
   if (!companion || getGlobalConfig().companionMuted) return
@@ -333,4 +353,77 @@ export async function fireCompanionObserver(
         }
     }
   }
+
+  // ─── Feedback Reactions ───────────────────────────────────────────────
+  if (feedbackResult?.detected) {
+    const replies = feedbackResult.type === 'undo' ? FEEDBACK_UNDO_REPLIES : FEEDBACK_CORRECTION_REPLIES
+    const reply = pickDeterministic(
+      replies,
+      `feedback-${feedbackResult.type}-${Date.now()}`,
+    )
+    onReaction(`${companion.name} ${reply}`)
+
+    // Save feedback reaction memory
+    const currentCompanion = getCompanion()
+    if (currentCompanion) {
+      saveGlobalConfig(curr => ({
+        ...curr,
+        companionMemory: [
+          ...(curr.companionMemory ?? []),
+          {
+            timestamp: Date.now(),
+            trigger: 'feedbackDetected',
+            text: `Feedback ${feedbackResult.type} detectado: ${feedbackResult.message}`,
+          },
+        ],
+      }))
+    }
+  }
+}
+
+export function notifyFeedbackConfirm(buddyName: string): string {
+  const companion = getCompanion()
+  if (!companion) return ''
+
+  // Grant +2 XP and increment stats via saveGlobalConfig callback
+  saveGlobalConfig(curr => ({
+    ...curr,
+    companion: curr.companion ? {
+      ...curr.companion,
+      xp: (curr.companion.xp ?? 0) + 2,
+    } : curr.companion,
+    companionStats: {
+      totalBashes: curr.companionStats?.totalBashes ?? 0,
+      totalTasks: curr.companionStats?.totalTasks ?? 0,
+      totalErrors: curr.companionStats?.totalErrors ?? 0,
+      totalPets: curr.companionStats?.totalPets ?? 0,
+      daysActive: curr.companionStats?.daysActive ?? 0,
+      totalTokensSaved: curr.companionStats?.totalTokensSaved ?? 0,
+      totalFeedbackRules: curr.companionStats?.totalFeedbackRules ?? 0,
+      totalFeedbackConfirms: (curr.companionStats?.totalFeedbackConfirms ?? 0) + 1,
+    },
+  }))
+
+  // Pick a reply
+  const reply = pickDeterministic(
+    FEEDBACK_CONFIRM_REPLIES,
+    `feedback-confirm-${Date.now()}`,
+  )
+  return `${buddyName} ${reply}`
+}
+
+export function notifyFeedbackRuleCreated(): void {
+  saveGlobalConfig(curr => ({
+    ...curr,
+    companionStats: {
+      totalBashes: curr.companionStats?.totalBashes ?? 0,
+      totalTasks: curr.companionStats?.totalTasks ?? 0,
+      totalErrors: curr.companionStats?.totalErrors ?? 0,
+      totalPets: curr.companionStats?.totalPets ?? 0,
+      daysActive: curr.companionStats?.daysActive ?? 0,
+      totalTokensSaved: curr.companionStats?.totalTokensSaved ?? 0,
+      totalFeedbackRules: (curr.companionStats?.totalFeedbackRules ?? 0) + 1,
+      totalFeedbackConfirms: curr.companionStats?.totalFeedbackConfirms ?? 0,
+    },
+  }))
 }
