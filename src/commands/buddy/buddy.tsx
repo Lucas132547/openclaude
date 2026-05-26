@@ -109,7 +109,6 @@ function titleCase(s: string): string {
 
 function createStoredCompanion(): StoredCompanion {
   const userId = companionUserId();
-  const { bones } = rollWithSeed(`${userId}:buddy`);
   const prefix = pickDeterministic(NAME_PREFIXES, `${userId}:prefix`);
   const suffix = pickDeterministic(NAME_SUFFIXES, `${userId}:suffix`);
   const personality = pickDeterministic(PERSONALITIES, `${userId}:personality`);
@@ -137,9 +136,9 @@ function setCompanionReaction(
 
 function showHelp(onDone: LocalJSXCommandOnDone): void {
   onDone(
-    "Uso: /buddy [status|mute|unmute|compact|decompact|preview|rename|reroll|brincar|alimentar|stats|outfits|equipar|outfit|resumo|lembrar|memorias|evolve|requisitos|pet premium|help]\n\nExecute /buddy sem argumentos para chocar seu companion na primeira vez, depois acaricie nas próximas.\n\nFontes de XP:\n  Bash com sucesso: +0.1 XP\n  Pet diário: +1 XP (primeiro /buddy do dia)\n  Task concluída: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n  Brincar: +0.5 XP (cooldown: 1h)\n  Easter eggs: +3 a +20 XP\n\nComandos:\n  /buddy rename <nome> — Custo: 5 XP, Requer Level 2\n  /buddy reroll — Custo: 15 XP (Rerrola atributos mantendo a espécie)\n  /buddy reroll especie — Custo: 50 XP (Rerrola para outra espécie do mesmo Tier de evolução)\n  /buddy brincar — Brinque com seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy pet premium — Ativa modo premium 1h (1 XP)\n  /buddy outfit <nome> — Equipa outfit (2 XP)\n  /buddy evolve — Evolui species (50 XP, Level 5+)\n  /buddy compact — Modo compacto (face de 1 linha)\n  /buddy decompact — Modo completo (sprite 24x10)\n  /buddy preview — Mostra todas as espécies\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)\n  /buddy outfits — Veja os outfits disponíveis\n  /buddy equipar <nome> — Equipe um outfit\n  /buddy chapeu <nome> — Troque seu chapéu\n  /buddy requisitos — Veja requisitos de outfits e chapéus\n  /buddy lembrar <min> <texto> — Define um lembrete\n  /buddy memorias — Veja as memórias do seu buddy\n  /buddy journal — Diário de hoje\n  /buddy achievements — Veja suas conquistas\n  /buddy shop — Visite a loja de itens\n  /buddy shop <categoria> — Filtra por categoria\n  /buddy buy <item-id> — Compra um item com XP\n  /buddy equip <item-id> — Equipa um item\n  /buddy unequip <item-id> — Desequipa um item\n  /buddy inventory — Veja seus itens\n  /buddy abilities — Veja abilities ativas\n  /buddy draw [comum|raro|epico] — Lucky Draw",
-    { display: "system" },
-  );
+    "Uso: /buddy [status|mute|unmute|compact|decompact|preview|rename|reroll|brincar|alimentar|hidratei|quests|stats|outfits|equipar|outfit|chapeu|resumo|lembrar|memorias|evolve|requisitos|pet premium|achievements|journal|shop|buy|equip|unequip|inventory|abilities|draw|help]\n\nExecute /buddy sem argumentos para chocar seu companion na primeira vez, depois acaricie nas próximas.\n\nFontes de XP:\n  Bash com sucesso: +0.1 XP\n  Read/Write/Edit/Search: +0.1 XP\n  Pet diário: +1 XP (primeiro /buddy do dia)\n  Task concluída: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n  Brincar: +0.5 XP (cooldown: 1h)\n  Hidratei: +0.5 XP (cooldown: 1h)\n  Quests: +1 a +5 XP (diário)\n  Easter eggs: +3 a +20 XP\n\nComandos:\n  /buddy rename <nome> — Custo: 5 XP, Requer Level 2\n  /buddy reroll — Gratuito (Temporariamente)\n  /buddy reroll especie — Custo: 50 XP (Rerrola para outra espécie do mesmo Tier de evolução)\n  /buddy brincar — Brinque com seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy hidratei — Avisa que você bebeu água e arrumou a postura (+0.5 XP, cooldown: 1h)\n  /buddy quests — Veja suas missões diárias\n  /buddy pet premium — Ativa modo premium 1h (1 XP)\n  /buddy outfit <nome> — Equipa outfit (2 XP)\n  /buddy evolve — Evolui species (50 XP, Level 5+)\n  /buddy compact — Modo compacto (face de 1 linha)\n  /buddy decompact — Modo completo (sprite 24x10)\n  /buddy preview — Mostra todas as espécies\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)\n  /buddy outfits — Veja os outfits disponíveis\n  /buddy equipar <nome> — Equipe um outfit\n  /buddy chapeu <nome> — Troque seu chapéu\n  /buddy requisitos — Veja requisitos de outfits e chapéus\n  /buddy lembrar <min> <texto> — Define um lembrete\n  /buddy memorias — Veja as memórias do seu buddy\n  /buddy journal — Diário de hoje\n  /buddy achievements — Veja suas conquistas\n  /buddy shop — Visite a loja de itens\n  /buddy shop <categoria> — Filtra por categoria\n  /buddy buy <item-id> — Compra um item com XP\n  /buddy equip <item-id> — Equipa um item\n  /buddy unequip <item-id> — Desequipa um item\n  /buddy inventory — Veja seus itens\n  /buddy abilities — Veja abilities ativas\n  /buddy draw [comum|raro|epico] — Lucky Draw",
+    { display: 'system' },
+  )
 }
 
 export async function call(
@@ -644,8 +643,64 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
     return null;
   }
 
+  // Interação de saúde — hidratei
+  if (arg === 'hidratei') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
+      return null
+    }
+
+    const config = getGlobalConfig()
+    const lastHidratei = config.companionLastAction?.hidratei ?? 0
+    const now = Date.now()
+    const cooldown = 60 * 60 * 1000 // 1 hora
+
+    const reactions = [
+      `${companion.name} enche um copinho de água também! 🥤`,
+      `${companion.name} aprova sua postura de não-camarão! 🦐🚫`,
+      `${companion.name} faz um brinde com sua garrafinha d'água! 🚰`,
+      `${companion.name} sorri ao ver você cuidando da saúde! 🧘`,
+    ]
+    const reaction = reactions[Math.floor(Date.now() / 1000) % reactions.length]!
+
+    if (now - lastHidratei < cooldown) {
+      // Já ganhou XP recentemente, mas vamos registrar a ação para o humor e dar a mensagem normal (sem XP extra).
+      saveGlobalConfig(current => ({
+        ...current,
+        companionLastAction: {
+          ...current.companionLastAction,
+          hidratei: now,
+        },
+      }))
+      setCompanionReaction(context, reaction, true)
+      onDone(`Boa! Postura reta e hidratado! (XP em cooldown)`, { display: 'system' })
+      return null
+    }
+
+    // +0.5 XP por hidratar/postura (primeira vez na hora)
+    const xp = companion.xp ?? 0
+    const newXp = Math.round((xp + 0.5) * 10) / 10
+
+    saveGlobalConfig(current => ({
+      ...current,
+      companionLastAction: {
+        ...current.companionLastAction,
+        hidratei: now,
+      },
+      companion: current.companion ? {
+        ...current.companion,
+        xp: newXp,
+      } : undefined,
+    }))
+
+    setCompanionReaction(context, reaction, true)
+    onDone(`Boa! Postura reta e hidratado! (+0.5 XP)`, { display: 'system' })
+    return null
+  }
+
   if (arg === "outfits") {
-    const companion = getCompanion();
+    const companion = getCompanion()
     if (!companion) {
       onDone("Nenhum buddy ainda. Use /buddy para criar um.", {
         display: "system",

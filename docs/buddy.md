@@ -32,6 +32,8 @@ Execute `/buddy` pela primeira vez para chocar seu companion. Ele será gerado d
 | Pet diário       | +1     | Primeiro `/buddy` do dia                       |
 | Task concluída   | +3     | Quando o assistente completa um TaskUpdate     |
 | Alimentar        | +0.5   | `/buddy alimentar` (cooldown: 1h)              |
+| Hidratei         | +0.5   | `/buddy hidratei` (cooldown: 1h)               |
+| Quests Diárias   | +1 a +5| Completar missões listadas em `/buddy quests`  |
 | Brincar          | +0.5   | `/buddy brincar` (cooldown: 1h)                |
 | Feedback confirm | +2     | `/feedback confirm` — consolida aprendizado    |
 | Stoneage ativado | +0.5   | Cada ativação do modo stoneage                 |
@@ -161,6 +163,13 @@ Evolui o companion para a próxima espécie na cadeia de evolução.
 - **Animação:** Sprite pisca por 3 segundos
 - **Ver seção Evolução para cadeias**
 
+### `/buddy hidratei`
+
+Avisa que você se hidratou e arrumou a postura! O buddy comemora com você e fica temporariamente com o humor "Refrescado".
+
+- **XP:** +0.5
+- **Cooldown:** 1 hora
+
 ### `/buddy resumo`
 
 Mostra um resumo da sessão atual.
@@ -247,14 +256,15 @@ O humor do companion é dinâmico e muda baseado na sua atividade:
 | Prioridade | Humor         | Condição                          |
 | ---------- | ------------- | --------------------------------- |
 | 1          | 🔥/⭐ Premium | Modo premium ativo                |
-| 2          | 😴 Sonolento  | Não fez pet hoje                  |
-| 3          | 🧠 Orgulhoso  | Score médio de feedback >= 80     |
-| 4          | 🤔 Preocupado | Score médio de feedback < 40      |
-| 5          | 📝 Neutro     | Sem regras de feedback aprendidas |
-| 6          | 😟 Preocupado | Taxa de erro > 40%                |
-| 7          | 🤩 Empolgado  | Múltiplo de 10 tasks concluídas   |
-| 8          | 😤 Orgulhoso  | Streak >= 7 dias                  |
-| 9          | 😄 Feliz      | Pet feito, sem problemas          |
+| 2          | 🧊 Refrescado | Reportou hidratação nos últimos 30min |
+| 3          | 😴 Sonolento  | Não fez pet hoje                  |
+| 4          | 🧠 Orgulhoso  | Score médio de feedback >= 80     |
+| 5          | 🤔 Preocupado | Score médio de feedback < 40      |
+| 6          | 📝 Neutro     | Sem regras de feedback aprendidas |
+| 7          | 😟 Preocupado | Taxa de erro > 40%                |
+| 8          | 🤩 Empolgado  | Múltiplo de 10 tasks concluídas   |
+| 9          | 😤 Orgulhoso  | Streak >= 7 dias                  |
+| 10         | 😄 Feliz      | Pet feito, sem problemas          |
 
 > **Nota:** Os moods de feedback (prioridades 3-5) têm prioridade sobre error rate e task milestones. Se o buddy tiver regras de feedback consolidadas (score alto), ele fica orgulhoso. Se tiver regras esquecidas (score baixo), fica preocupado.
 
@@ -519,7 +529,8 @@ O companion reage automaticamente a eventos. Após cada turno do query loop, o o
 
 O companion monitora seu trabalho e te avisa:
 
-- **1 hora trabalhando sem parar** — sugere uma pausa
+- **1 hora trabalhando sem parar** — sugere uma pausa para descansar os olhos
+- **1 hora e 30 minutos codando** — manda um lembrete para arrumar a postura e beber água
 - **15 minutos inativo** — pergunta se está travado
 
 ---
