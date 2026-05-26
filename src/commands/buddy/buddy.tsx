@@ -188,7 +188,7 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
     }
 
     const config = getGlobalConfig()
-    const stats = config.companionStats ?? { totalBashes: 0, totalTasks: 0, totalErrors: 0, totalPets: 0, daysActive: 0, totalTokensSaved: 0 }
+    const stats = config.companionStats ?? { totalBashes: 0, totalTasks: 0, totalErrors: 0, totalPets: 0, daysActive: 0, totalTokensSaved: 0, totalFeedbackRules: 0, totalFeedbackConfirms: 0 }
     const xp = companion.xp ?? 0
     const levelInfo = getLevelInfo(xp)
     const streak = config.companionStreakCount ?? 0
@@ -204,7 +204,12 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
       `Erros encontrados: ${stats.totalErrors}\n` +
       `Pets recebidos: ${stats.totalPets}\n` +
       `Dias ativos: ${stats.daysActive}\n` +
-      `Tokens economizados (stoneage): ${stats.totalTokensSaved}`,
+      `Tokens economizados (stoneage): ${stats.totalTokensSaved}` +
+      ((stats.totalFeedbackRules ?? 0) > 0 || (stats.totalFeedbackConfirms ?? 0) > 0
+        ? `\n━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `Regras de feedback: ${stats.totalFeedbackRules ?? 0}\n` +
+          `Confirmações: ${stats.totalFeedbackConfirms ?? 0}`
+        : ''),
       { display: 'system' },
     )
     return null
