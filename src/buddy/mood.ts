@@ -1,4 +1,6 @@
 import { getGlobalConfig } from '../utils/config.js'
+import { scanMemoryFiles } from '../memdir/memoryScan.js'
+import { getAutoMemPath } from '../memdir/paths.js'
 
 export type BuddyMood = {
   emoji: string
@@ -6,7 +8,40 @@ export type BuddyMood = {
   mood: 'feliz' | 'orgulhoso' | 'preocupado' | 'sonolento' | 'empolgado' | 'neutro'
 }
 
-export function getMood(): BuddyMood {
+async function getFeedbackMood(): Promise<BuddyMood | null> {
+  try {
+    const memories = await scanMemoryFiles(getAutoMemPath(), AbortSignal.timeout(1000))
+    const feedbackRules = memories.filter(m => m.type === 'feedback' && !m.ignored)
+
+    if (feedbackRules.length === 0) {
+      return { emoji: '📝', text: 'Ainda nao aprendi regras. Me corrija quando eu errar!', mood: 'neutro' }
+    }
+
+    const avgScore = feedbackRules.reduce((sum, m) => sum + (m.score ?? 50), 0) / feedbackRules.length
+
+    if (avgScore >= 80) {
+      return {
+        emoji: '🧠',
+        text: `Voce tem ${feedbackRules.length} regras consolidadas! Aprendendo rapido.`,
+        mood: 'orgulhoso',
+      }
+    }
+
+    if (avgScore < 40) {
+      return {
+        emoji: '🤔',
+        text: `Tenho ${feedbackRules.length} regras esquecidas... quer revisar?`,
+        mood: 'preocupado',
+      }
+    }
+
+    return null
+  } catch {
+    return null
+  }
+}
+
+export async function getMood(): Promise<BuddyMood> {
   const config = getGlobalConfig()
   const stats = config.companionStats
   const lastPetDate = config.companionLastPetDate
@@ -27,6 +62,14 @@ export function getMood(): BuddyMood {
   // Sonolento: não pet hoje
   if (lastPetDate !== today) {
     return { emoji: '😴', text: 'Tô com sono... me dá um pet?', mood: 'sonolento' }
+  }
+
+  // Feedback moods (async, best-effort)
+  try {
+    const feedbackMood = await getFeedbackMood()
+    if (feedbackMood) return feedbackMood
+  } catch {
+    // Ignore feedback mood errors
   }
 
   if (!stats) {

@@ -161,7 +161,7 @@ export async function call(
     const levelInfo = getLevelInfo(xp)
     const mutedStatus = getGlobalConfig().companionMuted ? 'Silenciado' : 'Ouvindo'
     const xpDisplay = xp % 1 === 0 ? xp.toString() : xp.toFixed(1)
-    const mood = getMood()
+    const mood = await getMood()
     const premiumUntil = companion.premiumUntil ?? 0
     const premiumActive = premiumUntil > Date.now()
     const premiumDisplay = premiumActive ? ` (${Math.ceil((premiumUntil - Date.now()) / 60000)}min restantes)` : ''
