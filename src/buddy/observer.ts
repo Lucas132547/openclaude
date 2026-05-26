@@ -308,6 +308,32 @@ export async function fireCompanionObserver(
        return
     }
 
+    // ─── Feedback Reactions ───────────────────────────────────────────────
+    if (feedbackResult?.detected) {
+      const replies = feedbackResult.type === 'undo' ? FEEDBACK_UNDO_REPLIES : FEEDBACK_CORRECTION_REPLIES
+      const reply = pickDeterministic(
+        replies,
+        `feedback-${feedbackResult.type}-${Date.now()}`,
+      )
+      onReaction(`${companion.name} ${reply}`)
+
+      // Save feedback reaction memory
+      const currentCompanion = getCompanion()
+      if (currentCompanion) {
+        saveGlobalConfig(curr => ({
+          ...curr,
+          companionMemory: [
+            ...(curr.companionMemory ?? []),
+            {
+              timestamp: Date.now(),
+              trigger: 'feedbackDetected',
+              text: `Feedback ${feedbackResult.type} detectado: ${feedbackResult.message}`,
+            },
+          ],
+        }))
+      }
+    }
+
     // Occasional success reaction (approx 20% chance on successful Bash/tool execution)
     if (lastMessage.name === 'Bash' && !isError && !isBashFailure) {
         // Bash success: +0.1 XP
@@ -353,56 +379,39 @@ export async function fireCompanionObserver(
         }
     }
   }
-
-  // ─── Feedback Reactions ───────────────────────────────────────────────
-  if (feedbackResult?.detected) {
-    const replies = feedbackResult.type === 'undo' ? FEEDBACK_UNDO_REPLIES : FEEDBACK_CORRECTION_REPLIES
-    const reply = pickDeterministic(
-      replies,
-      `feedback-${feedbackResult.type}-${Date.now()}`,
-    )
-    onReaction(`${companion.name} ${reply}`)
-
-    // Save feedback reaction memory
-    const currentCompanion = getCompanion()
-    if (currentCompanion) {
-      saveGlobalConfig(curr => ({
-        ...curr,
-        companionMemory: [
-          ...(curr.companionMemory ?? []),
-          {
-            timestamp: Date.now(),
-            trigger: 'feedbackDetected',
-            text: `Feedback ${feedbackResult.type} detectado: ${feedbackResult.message}`,
-          },
-        ],
-      }))
-    }
-  }
 }
 
 export function notifyFeedbackConfirm(buddyName: string): string {
   const companion = getCompanion()
   if (!companion) return ''
 
-  // Grant +2 XP and increment stats via saveGlobalConfig callback
-  saveGlobalConfig(curr => ({
-    ...curr,
-    companion: curr.companion ? {
-      ...curr.companion,
-      xp: (curr.companion.xp ?? 0) + 2,
-    } : curr.companion,
-    companionStats: {
-      totalBashes: curr.companionStats?.totalBashes ?? 0,
-      totalTasks: curr.companionStats?.totalTasks ?? 0,
-      totalErrors: curr.companionStats?.totalErrors ?? 0,
-      totalPets: curr.companionStats?.totalPets ?? 0,
-      daysActive: curr.companionStats?.daysActive ?? 0,
-      totalTokensSaved: curr.companionStats?.totalTokensSaved ?? 0,
-      totalFeedbackRules: curr.companionStats?.totalFeedbackRules ?? 0,
-      totalFeedbackConfirms: (curr.companionStats?.totalFeedbackConfirms ?? 0) + 1,
-    },
-  }))
+  // Grant +2 XP and increment stats in a single saveGlobalConfig call
+  // to avoid race conditions between two separate writes
+  saveGlobalConfig(curr => {
+    const currentXp = curr.companion?.xp ?? 0
+    const newXp = Math.round((currentXp + 2) * 10) / 10
+    const oldInfo = getLevelInfo(currentXp)
+    const newInfo = getLevelInfo(newXp)
+
+    return {
+      ...curr,
+      companion: curr.companion ? {
+        ...curr.companion,
+        xp: newXp,
+        hat: newInfo.hat ?? curr.companion.hat,
+      } : curr.companion,
+      companionStats: {
+        totalBashes: curr.companionStats?.totalBashes ?? 0,
+        totalTasks: curr.companionStats?.totalTasks ?? 0,
+        totalErrors: curr.companionStats?.totalErrors ?? 0,
+        totalPets: curr.companionStats?.totalPets ?? 0,
+        daysActive: curr.companionStats?.daysActive ?? 0,
+        totalTokensSaved: curr.companionStats?.totalTokensSaved ?? 0,
+        totalFeedbackRules: curr.companionStats?.totalFeedbackRules ?? 0,
+        totalFeedbackConfirms: (curr.companionStats?.totalFeedbackConfirms ?? 0) + 1,
+      },
+    }
+  })
 
   // Pick a reply
   const reply = pickDeterministic(
