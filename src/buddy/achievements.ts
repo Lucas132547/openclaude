@@ -161,6 +161,55 @@ export const ACHIEVEMENTS: Achievement[] = [
     emoji: '🔍',
     check: () => (getGlobalConfig().companionStats?.totalBashes ?? 0) >= 50, // Approximate
   },
+  {
+    id: 'stoneage-first',
+    name: 'Primeiro Contato',
+    description: 'Ative o stoneage pela primeira vez',
+    emoji: '🪨',
+    check: () => (getGlobalConfig().companionMemory ?? []).some(m => m.trigger === 'stoneageFirst'),
+  },
+  {
+    id: 'stoneage-fire',
+    name: 'Economia de Fogo',
+    description: 'Economize 1000 tokens estimados com stoneage',
+    emoji: '🔥',
+    check: () => (getGlobalConfig().companionStats?.totalTokensSaved ?? 0) >= 1000,
+  },
+  {
+    id: 'stoneage-mammoth',
+    name: 'Mamute de Ouro',
+    description: 'Economize 10000 tokens estimados com stoneage',
+    emoji: '🦣',
+    check: () => (getGlobalConfig().companionStats?.totalTokensSaved ?? 0) >= 10000,
+  },
+  {
+    id: 'stoneage-master',
+    name: 'Mestre das Pedras',
+    description: 'Ative o stoneage 50 vezes',
+    emoji: '⛏️',
+    check: () => (getGlobalConfig().companionStats?.totalTokensSaved ?? 0) >= 25000, // 50 * 500
+  },
+  {
+    id: 'feedback-aprendiz',
+    name: 'Aprendiz',
+    description: 'Confirme 5 regras de feedback',
+    emoji: '📚',
+    check: () => (getGlobalConfig().companionStats?.totalFeedbackConfirms ?? 0) >= 5,
+  },
+  {
+    id: 'feedback-mestre',
+    name: 'Mestre',
+    description: 'Confirme 15 regras de feedback',
+    emoji: '🎓',
+    check: () => (getGlobalConfig().companionStats?.totalFeedbackConfirms ?? 0) >= 15,
+  },
+  {
+    id: 'feedback-sabio',
+    name: 'Sabio',
+    description: 'Confirme 30 regras de feedback',
+    emoji: '🧙',
+    check: () => (getGlobalConfig().companionStats?.totalFeedbackConfirms ?? 0) >= 30,
+  },
 ]
 
 export function getUnlockedAchievements(): Achievement[] {

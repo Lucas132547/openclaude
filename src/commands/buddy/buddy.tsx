@@ -161,7 +161,7 @@ export async function call(
     const levelInfo = getLevelInfo(xp)
     const mutedStatus = getGlobalConfig().companionMuted ? 'Silenciado' : 'Ouvindo'
     const xpDisplay = xp % 1 === 0 ? xp.toString() : xp.toFixed(1)
-    const mood = getMood()
+    const mood = await getMood()
     const premiumUntil = companion.premiumUntil ?? 0
     const premiumActive = premiumUntil > Date.now()
     const premiumDisplay = premiumActive ? ` (${Math.ceil((premiumUntil - Date.now()) / 60000)}min restantes)` : ''
@@ -188,7 +188,7 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
     }
 
     const config = getGlobalConfig()
-    const stats = config.companionStats ?? { totalBashes: 0, totalTasks: 0, totalErrors: 0, totalPets: 0, daysActive: 0 }
+    const stats = config.companionStats ?? { totalBashes: 0, totalTasks: 0, totalErrors: 0, totalPets: 0, daysActive: 0, totalTokensSaved: 0, totalFeedbackRules: 0, totalFeedbackConfirms: 0 }
     const xp = companion.xp ?? 0
     const levelInfo = getLevelInfo(xp)
     const streak = config.companionStreakCount ?? 0
@@ -203,7 +203,13 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
       `Tasks concluídas: ${stats.totalTasks}\n` +
       `Erros encontrados: ${stats.totalErrors}\n` +
       `Pets recebidos: ${stats.totalPets}\n` +
-      `Dias ativos: ${stats.daysActive}`,
+      `Dias ativos: ${stats.daysActive}\n` +
+      `Tokens economizados (stoneage): ${stats.totalTokensSaved}` +
+      ((stats.totalFeedbackRules ?? 0) > 0 || (stats.totalFeedbackConfirms ?? 0) > 0
+        ? `\n━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `Regras de feedback: ${stats.totalFeedbackRules ?? 0}\n` +
+          `Confirmações: ${stats.totalFeedbackConfirms ?? 0}`
+        : ''),
       { display: 'system' },
     )
     return null
@@ -785,6 +791,9 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
       totalErrors: current.companionStats?.totalErrors ?? 0,
       totalPets: (current.companionStats?.totalPets ?? 0) + 1,
       daysActive: current.companionStats?.daysActive ?? 0,
+      totalTokensSaved: current.companionStats?.totalTokensSaved ?? 0,
+      totalFeedbackRules: current.companionStats?.totalFeedbackRules ?? 0,
+      totalFeedbackConfirms: current.companionStats?.totalFeedbackConfirms ?? 0,
     },
   }))
 

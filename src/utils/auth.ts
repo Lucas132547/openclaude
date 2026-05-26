@@ -1088,6 +1088,7 @@ export const getApiKeyFromConfigOrMacOSKeychain = memoize(
         try {
           const result = execSyncWithDefaults_DEPRECATED(
             `security find-generic-password -a $USER -w -s "${storageServiceName}"`,
+            { timeout: 1500 }
           )
           if (result) {
             return { key: result, source: '/login managed key' }

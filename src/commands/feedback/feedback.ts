@@ -11,6 +11,8 @@ import { getAutoMemPath } from '../../memdir/paths.js'
 import { getFsImplementation } from '../../utils/fsOperations.js'
 import { parseFrontmatter } from '../../utils/frontmatterParser.js'
 import type { LocalCommandCall, LocalCommandResult } from '../../types/command.js'
+import { notifyFeedbackConfirm } from '../../buddy/observer.js'
+import { getCompanion } from '../../buddy/companion.js'
 import chalk from 'chalk'
 
 function stringifyFrontmatter(frontmatter: Record<string, any>): string {
@@ -54,9 +56,15 @@ export const call: LocalCommandCall = async (args, context): Promise<LocalComman
       } catch {}
       fs.appendFileSync(logPath, logContent, { encoding: 'utf8' })
 
+      // Notify buddy and grant XP
+      const companion = getCompanion()
+      const buddyName = companion?.name ?? 'Buddy'
+      const buddyReaction = notifyFeedbackConfirm(buddyName)
+
       return {
         type: 'text',
-        value: chalk.green('[Feedback System] Padrão de feedback confirmado e salvo com sucesso! O sintetizador dará prioridade extra a esta regra na próxima consolidação.'),
+        value: chalk.green('[Feedback System] Padrão de feedback confirmado e salvo com sucesso! O sintetizador dará prioridade extra a esta regra na próxima consolidação.') +
+          (buddyReaction ? `\n\n${buddyReaction}` : ''),
       }
     }
 

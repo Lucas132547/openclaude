@@ -1,5 +1,6 @@
 import { execSync } from 'child_process'
 import type { Message } from '../types/message.js'
+import type { FeedbackDetectionResult } from '../hooks/feedbackHook.js'
 import { saveGlobalConfig, getGlobalConfig } from '../utils/config.js'
 import { getUserMessageText } from '../utils/messages.js'
 import { getCompanion } from './companion.js'
@@ -68,6 +69,34 @@ const TASK_COMPLETED_REPLIES = [
   'Concluído! O que vem a seguir?',
 ] as const
 
+const FEEDBACK_CORRECTION_REPLIES = [
+  'Hmm, vou anotar isso para nao errar de novo...',
+  'Entendi! Deixa eu registrar essa regra.',
+  'Opa, correcao recebida. Aprendendo!',
+  'Puxa, desculpe! Vou memorizar isso.',
+] as const
+
+const FEEDBACK_UNDO_REPLIES = [
+  'Ops, desfiz algo errado? Vou anotar.',
+  'Revertido! Vou lembrar da proxima vez.',
+] as const
+
+const FEEDBACK_CONFIRM_REPLIES = [
+  'Regra consolidada! +2 XP',
+  'Aprendizado confirmado! Estou mais inteligente agora.',
+  'Memoria fortalecida! Obrigado por confirmar.',
+] as const
+
+const STONEAGE_REPLIES = [
+  'Pedra afiada. Resposta menor.',
+  'Gravuras na caverna. Código compacto.',
+  'Fogo bom. Menos palavras, mais ação.',
+  'Mamute satisfeito com a economia.',
+  'Rodinha redonda. Tokens economizados.',
+  'Lascagem perfeita. Sobra só o essencial.',
+  'Pintura rupestre: poucos traços, história completa.',
+] as const
+
 function getTodayString(): string {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -86,6 +115,9 @@ function trackActiveDay() {
         totalErrors: curr.companionStats?.totalErrors ?? 0,
         totalPets: curr.companionStats?.totalPets ?? 0,
         daysActive: (curr.companionStats?.daysActive ?? 0) + 1,
+        totalTokensSaved: curr.companionStats?.totalTokensSaved ?? 0,
+        totalFeedbackRules: curr.companionStats?.totalFeedbackRules ?? 0,
+        totalFeedbackConfirms: curr.companionStats?.totalFeedbackConfirms ?? 0,
       },
     }))
   }
@@ -100,6 +132,9 @@ function incrementStat(stat: 'totalBashes' | 'totalTasks' | 'totalErrors') {
       totalErrors: curr.companionStats?.totalErrors ?? 0,
       totalPets: curr.companionStats?.totalPets ?? 0,
       daysActive: curr.companionStats?.daysActive ?? 0,
+      totalTokensSaved: curr.companionStats?.totalTokensSaved ?? 0,
+      totalFeedbackRules: curr.companionStats?.totalFeedbackRules ?? 0,
+      totalFeedbackConfirms: curr.companionStats?.totalFeedbackConfirms ?? 0,
       [stat]: (curr.companionStats?.[stat] ?? 0) + 1,
     },
   }))
@@ -136,6 +171,7 @@ function grantXp(companionName: string, amount: number): number | null {
 export async function fireCompanionObserver(
   messages: Message[],
   onReaction: (reaction: string | undefined) => void,
+  feedbackResult?: FeedbackDetectionResult,
 ): Promise<void> {
   const companion = getCompanion()
   if (!companion || getGlobalConfig().companionMuted) return
@@ -153,6 +189,35 @@ export async function fireCompanionObserver(
 
       if (lower.includes('/buddy')) {
         onReaction(pickDeterministic(PET_REPLIES, text + companion.name))
+        return
+      }
+
+      // Stoneage mode detection — token compression mode
+      if (/\bstoneage\b/i.test(lower)) {
+        const levelUp = grantXp(companion.name, 0.5)
+        saveGlobalConfig(curr => ({
+          ...curr,
+          companionStats: {
+            totalBashes: curr.companionStats?.totalBashes ?? 0,
+            totalTasks: curr.companionStats?.totalTasks ?? 0,
+            totalErrors: curr.companionStats?.totalErrors ?? 0,
+            totalPets: curr.companionStats?.totalPets ?? 0,
+            daysActive: curr.companionStats?.daysActive ?? 0,
+            totalTokensSaved: (curr.companionStats?.totalTokensSaved ?? 0) + 500,
+            totalFeedbackRules: curr.companionStats?.totalFeedbackRules ?? 0,
+            totalFeedbackConfirms: curr.companionStats?.totalFeedbackConfirms ?? 0,
+          },
+        }))
+        // Check for first-time activation achievement
+        const stats = getGlobalConfig().companionStats
+        if (stats && (stats.totalTokensSaved ?? 0) <= 500) {
+          addMemory('stoneageFirst')
+        }
+        if (levelUp) {
+          onReaction(`${companion.name}: Uau! Subi para o Nível ${levelUp}! Stoneage ativado — economia de tokens em ação!`)
+        } else {
+          onReaction(`${companion.name}: ${pickDeterministic(STONEAGE_REPLIES, text + companion.name)}`)
+        }
         return
       }
 
@@ -183,13 +248,18 @@ export async function fireCompanionObserver(
   }
 
   // 2. Process tool results for contextual reactions
-  // Look at the last message. If it's a tool_result or assistant message, we check for status.
-  const lastMessage = messages[messages.length - 1]
+  // Scan recent messages (reverse) to find tool results and task completions.
+  // After a tool-use loop, the message sequence is:
+  //   User → Assistant(tool_use) → User(tool_result) → Assistant(text response)
+  // The last message is always the assistant's text reply, so checking only
+  // messages[length-1] misses all tool_results and earlier tool_use blocks.
+  const recentMessages = messages.slice(-10)
 
-  if (lastMessage?.type === 'assistant') {
-    // Check if the assistant just called TaskUpdate with status: completed
-    if (lastMessage.content && Array.isArray(lastMessage.content)) {
-      for (const content of lastMessage.content) {
+  // Check for TaskUpdate status:completed in any recent assistant message
+  for (let i = recentMessages.length - 1; i >= 0; i--) {
+    const msg = recentMessages[i]!
+    if (msg.type === 'assistant' && msg.content && Array.isArray(msg.content)) {
+      for (const content of msg.content) {
         if (content.type === 'tool_use' && content.name === 'TaskUpdate') {
           const input = content.input
           if (typeof input === 'object' && input !== null && 'status' in input && input.status === 'completed') {
@@ -210,9 +280,10 @@ export async function fireCompanionObserver(
     }
   }
 
-  // Easter Egg: "42" answer detection
-  if (lastMessage?.type === 'assistant' && lastMessage.content) {
-    const contentStr = typeof lastMessage.content === 'string' ? lastMessage.content : JSON.stringify(lastMessage.content)
+  // Easter Egg: "42" answer detection (check last assistant message)
+  const lastAssistant = [...recentMessages].reverse().find(m => m.type === 'assistant')
+  if (lastAssistant?.type === 'assistant' && lastAssistant.content) {
+    const contentStr = typeof lastAssistant.content === 'string' ? lastAssistant.content : JSON.stringify(lastAssistant.content)
     const answer42 = checkAnswer42(contentStr)
     if (answer42.triggered) {
       grantXp(companion.name, answer42.xpBonus!)
@@ -222,14 +293,18 @@ export async function fireCompanionObserver(
     }
   }
 
-  if (lastMessage?.type === 'tool_result' && lastMessage.content) {
-    const isError = lastMessage.is_error
+  // Scan recent tool_result messages for errors and bash success
+  let foundBashSuccess = false
+  let lastBashContent = ''
+  for (let i = recentMessages.length - 1; i >= 0; i--) {
+    const msg = recentMessages[i]!
+    if (msg.type !== 'tool_result' || !msg.content) continue
 
-    // Check if it's a Bash command that failed (they don't always have is_error: true, but might have Error in output)
-    const contentStr = typeof lastMessage.content === 'string' ? lastMessage.content : JSON.stringify(lastMessage.content)
+    const isError = msg.is_error
+    const contentStr = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
 
-    const isBashFailure = lastMessage.name === 'Bash' &&
-      (contentStr.includes('Error: Exit code') || contentStr.includes('Command failed'));
+    const isBashFailure = msg.name === 'Bash' &&
+      (contentStr.includes('Error: Exit code') || contentStr.includes('Command failed'))
 
     if (isError || isBashFailure) {
        incrementStat('totalErrors')
@@ -243,49 +318,135 @@ export async function fireCompanionObserver(
        return
     }
 
-    // Occasional success reaction (approx 20% chance on successful Bash/tool execution)
-    if (lastMessage.name === 'Bash' && !isError && !isBashFailure) {
-        // Bash success: +0.1 XP
-        incrementStat('totalBashes')
-        grantXp(companion.name, 0.1)
-        const bashStats = getGlobalConfig().companionStats
-        if (bashStats && bashStats.totalBashes === 100) addMemory('bashes100')
-
-        if (Math.random() < 0.2) {
-            onReaction(`${companion.name}: ${SUCCESS_REPLIES[Math.floor(Date.now() / 1000) % SUCCESS_REPLIES.length]!}`)
-        }
-
-        // Skill: Code Review Buddy (75% chance, 98% with premium)
-        const premiumActive = (getGlobalConfig().companion?.premiumUntil ?? 0) > Date.now()
-        const reviewTip = getCodeReviewTip(premiumActive, contentStr)
-        if (reviewTip) {
-          setTimeout(() => onReaction(`${companion.name}: 🔍 ${reviewTip}`), 3000)
-        }
-
-        // Git status awareness (10% chance to avoid spam)
-        if (Math.random() < 0.1) {
-            try {
-              const gitStatus = execSync('git status --porcelain 2>/dev/null', { encoding: 'utf8', timeout: 2000 }).trim()
-              const uncommittedCount = gitStatus ? gitStatus.split('\n').length : 0
-
-              if (uncommittedCount > 10) {
-                onReaction(`${companion.name}: Você tem ${uncommittedCount} arquivos não commitados... talvez seja hora de um commit?`)
-                return
-              }
-            } catch {
-              // Not in a git repo or git not available — ignore
-            }
-
-            try {
-              const behind = execSync('git rev-list --count HEAD..@{upstream} 2>/dev/null', { encoding: 'utf8', timeout: 2000 }).trim()
-              if (behind && parseInt(behind) > 5) {
-                onReaction(`${companion.name}: Sua branch está ${behind} commits atrás do remote. Hora de dar pull!`)
-                return
-              }
-            } catch {
-              // No upstream or not in git repo — ignore
-            }
-        }
+    // Track successful Bash execution (first non-error bash from the end)
+    if (msg.name === 'Bash' && !foundBashSuccess) {
+      foundBashSuccess = true
+      lastBashContent = contentStr
     }
   }
+
+  // ─── Feedback Reactions ───────────────────────────────────────────────
+  if (feedbackResult?.detected) {
+    const replies = feedbackResult.type === 'undo' ? FEEDBACK_UNDO_REPLIES : FEEDBACK_CORRECTION_REPLIES
+    const reply = pickDeterministic(
+      replies,
+      `feedback-${feedbackResult.type}-${Date.now()}`,
+    )
+    onReaction(`${companion.name} ${reply}`)
+
+    // Save feedback reaction memory
+    const currentCompanion = getCompanion()
+    if (currentCompanion) {
+      saveGlobalConfig(curr => ({
+        ...curr,
+        companionMemory: [
+          ...(curr.companionMemory ?? []),
+          {
+            timestamp: Date.now(),
+            trigger: 'feedbackDetected',
+            text: `Feedback ${feedbackResult.type} detectado: ${feedbackResult.message}`,
+          },
+        ],
+      }))
+    }
+  }
+
+  // Bash success: +0.1 XP (approx 20% chance for reaction)
+  if (foundBashSuccess) {
+      incrementStat('totalBashes')
+      grantXp(companion.name, 0.1)
+      const bashStats = getGlobalConfig().companionStats
+      if (bashStats && bashStats.totalBashes === 100) addMemory('bashes100')
+
+      if (Math.random() < 0.2) {
+          onReaction(`${companion.name}: ${SUCCESS_REPLIES[Math.floor(Date.now() / 1000) % SUCCESS_REPLIES.length]!}`)
+      }
+
+      // Skill: Code Review Buddy (75% chance, 98% with premium)
+      const premiumActive = (getGlobalConfig().companion?.premiumUntil ?? 0) > Date.now()
+      const reviewTip = getCodeReviewTip(premiumActive, lastBashContent)
+      if (reviewTip) {
+        setTimeout(() => onReaction(`${companion.name}: 🔍 ${reviewTip}`), 3000)
+      }
+
+      // Git status awareness (10% chance to avoid spam)
+      if (Math.random() < 0.1) {
+          try {
+            const gitStatus = execSync('git status --porcelain 2>/dev/null', { encoding: 'utf8', timeout: 2000 }).trim()
+            const uncommittedCount = gitStatus ? gitStatus.split('\n').length : 0
+
+            if (uncommittedCount > 10) {
+              onReaction(`${companion.name}: Você tem ${uncommittedCount} arquivos não commitados... talvez seja hora de um commit?`)
+              return
+            }
+          } catch {
+            // Not in a git repo or git not available — ignore
+          }
+
+          try {
+            const behind = execSync('git rev-list --count HEAD..@{upstream} 2>/dev/null', { encoding: 'utf8', timeout: 2000 }).trim()
+            if (behind && parseInt(behind) > 5) {
+              onReaction(`${companion.name}: Sua branch está ${behind} commits atrás do remote. Hora de dar pull!`)
+              return
+            }
+          } catch {
+            // No upstream or not in git repo — ignore
+          }
+      }
+  }
+}
+
+export function notifyFeedbackConfirm(buddyName: string): string {
+  const companion = getCompanion()
+  if (!companion) return ''
+
+  // Grant +2 XP and increment stats in a single saveGlobalConfig call
+  // to avoid race conditions between two separate writes
+  saveGlobalConfig(curr => {
+    const currentXp = curr.companion?.xp ?? 0
+    const newXp = Math.round((currentXp + 2) * 10) / 10
+    const newInfo = getLevelInfo(newXp)
+
+    return {
+      ...curr,
+      companion: curr.companion ? {
+        ...curr.companion,
+        xp: newXp,
+        hat: newInfo.hat ?? curr.companion.hat,
+      } : curr.companion,
+      companionStats: {
+        totalBashes: curr.companionStats?.totalBashes ?? 0,
+        totalTasks: curr.companionStats?.totalTasks ?? 0,
+        totalErrors: curr.companionStats?.totalErrors ?? 0,
+        totalPets: curr.companionStats?.totalPets ?? 0,
+        daysActive: curr.companionStats?.daysActive ?? 0,
+        totalTokensSaved: curr.companionStats?.totalTokensSaved ?? 0,
+        totalFeedbackRules: curr.companionStats?.totalFeedbackRules ?? 0,
+        totalFeedbackConfirms: (curr.companionStats?.totalFeedbackConfirms ?? 0) + 1,
+      },
+    }
+  })
+
+  // Pick a reply
+  const reply = pickDeterministic(
+    FEEDBACK_CONFIRM_REPLIES,
+    `feedback-confirm-${Date.now()}`,
+  )
+  return `${buddyName} ${reply}`
+}
+
+export function notifyFeedbackRuleCreated(): void {
+  saveGlobalConfig(curr => ({
+    ...curr,
+    companionStats: {
+      totalBashes: curr.companionStats?.totalBashes ?? 0,
+      totalTasks: curr.companionStats?.totalTasks ?? 0,
+      totalErrors: curr.companionStats?.totalErrors ?? 0,
+      totalPets: curr.companionStats?.totalPets ?? 0,
+      daysActive: curr.companionStats?.daysActive ?? 0,
+      totalTokensSaved: curr.companionStats?.totalTokensSaved ?? 0,
+      totalFeedbackRules: (curr.companionStats?.totalFeedbackRules ?? 0) + 1,
+      totalFeedbackConfirms: curr.companionStats?.totalFeedbackConfirms ?? 0,
+    },
+  }))
 }

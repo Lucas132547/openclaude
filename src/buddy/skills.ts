@@ -1,4 +1,6 @@
 import { getGlobalConfig } from '../utils/config.js'
+import { scanMemoryFiles } from '../memdir/memoryScan.js'
+import { getAutoMemPath } from '../memdir/paths.js'
 import { getLevelInfo } from './progression.js'
 
 // ─── Error Tips (Level 2+) ──────────────────────────────────────────────────
@@ -441,6 +443,45 @@ export function getCodeReviewTip(premiumActive: boolean, bashCommand?: string): 
     return pickContextual(CODE_REVIEW_CATEGORIES, CODE_REVIEW_TIPS_GENERIC, bashCommand)
   }
   return CODE_REVIEW_TIPS_GENERIC[Math.floor(Date.now() / 1000) % CODE_REVIEW_TIPS_GENERIC.length]!
+}
+
+// ─── Feedback Tips (60% chance, 85% premium) ─────────────────────────────
+
+export async function getFeedbackTip(
+  premiumActive: boolean,
+  context?: string,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  const chance = premiumActive ? 0.85 : 0.60
+  if (Math.random() > chance) return null
+
+  try {
+    const memories = await scanMemoryFiles(getAutoMemPath(), signal ?? AbortSignal.timeout(2000))
+    const feedbackRules = memories.filter(
+      m => m.type === 'feedback' && !m.ignored && (m.score ?? 0) >= 20,
+    )
+
+    if (feedbackRules.length === 0) return null
+
+    if (context) {
+      const contextLower = context.toLowerCase()
+      const matched = feedbackRules.find(m => {
+        const desc = (m.description ?? '').toLowerCase()
+        const name = m.filename.toLowerCase()
+        const words = contextLower.split(/\s+/).filter(w => w.length > 3)
+        return words.some(w => desc.includes(w) || name.includes(w))
+      })
+
+      if (matched) {
+        return `💡 Regra aprendida: ${matched.description ?? matched.filename}`
+      }
+    }
+
+    const picked = feedbackRules[Math.floor(Date.now() / 1000) % feedbackRules.length]!
+    return `💡 Regra aprendida: ${picked.description ?? picked.filename}`
+  } catch {
+    return null
+  }
 }
 
 // ─── Session Summary (Level 4+) ─────────────────────────────────────────────
