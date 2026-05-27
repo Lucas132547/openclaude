@@ -28,6 +28,9 @@ Execute `/buddy` pela primeira vez para chocar seu companion. Ele será gerado d
 | Pet diário      | +1     | Primeiro `/buddy` do dia                     |
 | Task concluída  | +3     | Quando o assistente completa um TaskUpdate     |
 | Alimentar        | +0.5   | `/buddy alimentar` (cooldown: 1h)            |
+| Hidratei         | +0.5   | `/buddy hidratei` (cooldown: 1h)           |
+| Quests Diárias   | +1 a +5| Completar missões listadas em `/buddy quests` |
+<<<<<<< HEAD
 | Feedback confirm | +2     | `/feedback confirm` — consolida aprendizado |
 | Stoneage ativado | +0.5   | Cada ativação do modo stoneage               |
 | Streak 3 dias    | +0.5   | Bônus por 3 dias seguidos                     |
@@ -35,6 +38,13 @@ Execute `/buddy` pela primeira vez para chocar seu companion. Ele será gerado d
 | Streak 14 dias   | +2     | Bônus por 14 dias seguidos                    |
 | Streak 30 dias   | +3     | Bônus por 30 dias seguidos                    |
 | Easter egg       | +3~+20 | Vários tipos (ver seção Easter Eggs)        |
+=======
+| Streak 3 dias    | +0.5   | Bônus por 3 dias seguidos                  |
+| Streak 7 dias    | +1     | Bônus por 7 dias seguidos                  |
+| Streak 14 dias   | +2     | Bônus por 14 dias seguidos                 |
+| Streak 30 dias   | +3     | Bônus por 30 dias seguidos                 |
+| Easter egg       | +3~+20 | Vários tipos (ver seção Easter Eggs)       |
+>>>>>>> 0bc3f1a (feat: implementando feature de daily quests com recompensa de xp.)
 
 ### Níveis e Chapéus
 
@@ -150,6 +160,17 @@ Evolui o companion para a próxima espécie na cadeia de evolução.
 - **Animação:** Sprite pisca por 3 segundos
 - **Ver seção Evolução para cadeias**
 
+### `/buddy hidratei`
+
+Avisa que você se hidratou e arrumou a postura! O buddy comemora com você e fica temporariamente com o humor "Refrescado".
+
+- **XP:** +0.5
+- **Cooldown:** 1 hora
+
+### `/buddy quests`
+
+Mostra o painel com as suas 3 missões diárias. Cada missão garante um bônus de XP após concluída.
+
 ### `/buddy resumo`
 
 Mostra um resumo da sessão atual.
@@ -234,18 +255,18 @@ O companion pode evoluir para uma forma mais forte. Existem 8 cadeias de evoluç
 O humor do companion é dinâmico e muda baseado na sua atividade:
 
 | Prioridade | Humor         | Condição                        |
+| Prioridade | Humor         | Condição                        |
 | ---------- | ------------- | --------------------------------- |
 | 1          | 🔥/⭐ Premium | Modo premium ativo                |
-| 2          | 😴 Sonolento  | Não fez pet hoje                 |
-| 3          | 🧠 Orgulhoso  | Score médio de feedback >= 80    |
-| 4          | 🤔 Preocupado | Score médio de feedback < 40     |
-| 5          | 📝 Neutro     | Sem regras de feedback aprendidas |
-| 6          | 😟 Preocupado | Taxa de erro > 40%                |
-| 7          | 🤩 Empolgado  | Múltiplo de 10 tasks concluídas |
-| 8          | 😤 Orgulhoso  | Streak >= 7 dias                  |
-| 9          | 😄 Feliz      | Pet feito, sem problemas          |
-
-> **Nota:** Os moods de feedback (prioridades 3-5) têm prioridade sobre error rate e task milestones. Se o buddy tiver regras de feedback consolidadas (score alto), ele fica orgulhoso. Se tiver regras esquecidas (score baixo), fica preocupado.
+| 2          | 🧊 Refrescado | Reportou hidratação nos últimos 30min |
+| 3          | 😴 Sonolento  | Não fez pet hoje                 |
+| 4          | 🧠 Orgulhoso  | Score médio de feedback >= 80    |
+| 5          | 🤔 Preocupado | Score médio de feedback < 40     |
+| 6          | 📝 Neutro     | Sem regras de feedback aprendidas |
+| 7          | 😟 Preocupado | Taxa de erro > 40%                |
+| 8          | 🤩 Empolgado  | Múltiplo de 10 tasks concluídas |
+| 9          | 😤 Orgulhoso  | Streak >= 7 dias                  |
+| 10         | 😄 Feliz      | Pet feito, sem problemas          |
 
 ---
 
@@ -504,7 +525,8 @@ O companion reage automaticamente a eventos. Após cada turno do query loop, o o
 
 O companion monitora seu trabalho e te avisa:
 
-- **1 hora trabalhando sem parar** — sugere uma pausa
+- **1 hora trabalhando sem parar** — sugere uma pausa para descansar os olhos
+- **1 hora e 30 minutos codando** — manda um lembrete para arrumar a postura e beber água
 - **15 minutos inativo** — pergunta se está travado
 
 ---
@@ -578,9 +600,16 @@ A linha 0 de cada frame é reservada para o chapéu. Se não houver chapéu e to
 | `src/buddy/evolution.ts`        | Sistema de evolução (8 cadeias)                              |
 | `src/buddy/easter-eggs.ts`      | Easter eggs (7 tipos)                                          |
 | `src/buddy/streak.ts`           | Sistema de streak diário                                      |
+<<<<<<< HEAD
 | `src/buddy/reminders.ts`        | Lembretes de produtividade e customizados                      |
 | `src/buddy/prompt.ts`           | Injeção no system prompt                                     |
 | `src/buddy/CompanionSprite.tsx` | Renderização visual (ASCII art 24x10 + outfits)              |
+=======
+| `src/buddy/reminders.ts`        | Lembretes de produtividade e customizados                     |
+| `src/buddy/quests.ts`           | Pool de Missões Diárias e gerador de rotinas                  |
+| `src/buddy/prompt.ts`           | Injeção no system prompt                                      |
+| `src/buddy/CompanionSprite.tsx` | Renderização visual (ASCII art 24x10 + outfits)               |
+>>>>>>> 0bc3f1a (feat: implementando feature de daily quests com recompensa de xp.)
 | `src/buddy/sprites.ts`          | Sprites das 24 espécies (24x10, 3 frames) + estilos de outfit |
 | `src/buddy/journal.ts`          | Diário do companion                                           |
 | `src/buddy/seasonal.ts`         | Eventos sazonais (7 eventos)                                   |
@@ -612,6 +641,10 @@ companionReminders?: Array<{...}>    // Lembretes customizados
 companionMemory?: Array<{...}>       // Memórias
 companionOutfits?: string[]          // Outfits desbloqueados
 companionActiveOutfit?: string       // Outfit equipado
+companionQuests?: {                  // Progresso das missões
+  date: string
+  completed: Record<string, boolean>
+}
 ```
 
 ---

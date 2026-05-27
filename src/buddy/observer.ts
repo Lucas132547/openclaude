@@ -9,6 +9,8 @@ import { getLevelInfo } from './progression.js'
 import { getErrorTip, getCodeReviewTip } from './skills.js'
 import { checkKonamiCode, checkAnswer42 } from './easter-eggs.js'
 import { addMemory } from './memory.js'
+import { getTodayQuests, getTodayString as getQuestTodayString } from './quests.js'
+import type { Quest } from './quests.js'
 
 const DIRECT_REPLIES = [
   'Estou observando.',
@@ -168,6 +170,57 @@ function grantXp(companionName: string, amount: number): number | null {
   return newLevel
 }
 
+function checkQuests(actionType: string, payload?: string, onReaction?: (reaction: string) => void) {
+  const companion = getCompanion()
+  if (!companion || getGlobalConfig().companionMuted) return
+
+  const today = getQuestTodayString()
+  const quests = getTodayQuests()
+  const config = getGlobalConfig()
+
+  let questData = config.companionQuests
+  if (questData?.date !== today) {
+    questData = { date: today, completed: {} }
+  }
+
+  const newlyCompleted: Quest[] = []
+
+  for (const q of quests) {
+    if (questData.completed[q.id]) continue
+
+    let isCompleted = false
+    switch(q.id) {
+      case 'bash_long': isCompleted = (actionType === 'bash' && payload !== undefined && payload.length > 50); break;
+      case 'bash_git': isCompleted = (actionType === 'bash' && payload !== undefined && payload.startsWith('git ')); break;
+      case 'bash_npm': isCompleted = (actionType === 'bash' && payload !== undefined && (payload.startsWith('npm ') || payload.startsWith('yarn ') || payload.startsWith('pnpm '))); break;
+      case 'bash_error': isCompleted = (actionType === 'bash_error'); break;
+      case 'task_completed': isCompleted = (actionType === 'task_completed'); break;
+      case 'buddy_pet': isCompleted = (actionType === 'buddy_pet'); break;
+      case 'buddy_brincar': isCompleted = (actionType === 'buddy_brincar'); break;
+      case 'buddy_hidratei': isCompleted = (actionType === 'buddy_hidratei'); break;
+      case 'buddy_stats': isCompleted = (actionType === 'buddy_stats'); break;
+      case 'buddy_journal': isCompleted = (actionType === 'buddy_journal'); break;
+      case 'buddy_outfits': isCompleted = (actionType === 'buddy_outfits'); break;
+      case 'buddy_quests': isCompleted = (actionType === 'buddy_quests'); break;
+    }
+
+    if (isCompleted) {
+      questData.completed[q.id] = true
+      newlyCompleted.push(q)
+    }
+  }
+
+  if (newlyCompleted.length > 0) {
+    saveGlobalConfig(curr => ({ ...curr, companionQuests: questData }))
+    for (const q of newlyCompleted) {
+       grantXp(companion.name, q.xpReward)
+       if (onReaction) {
+         setTimeout(() => onReaction(`${companion.name}: 🎯 Quest diária concluída: "${q.description}" (+${q.xpReward} XP)`), 1500)
+       }
+    }
+  }
+}
+
 export async function fireCompanionObserver(
   messages: Message[],
   onReaction: (reaction: string | undefined) => void,
@@ -188,7 +241,23 @@ export async function fireCompanionObserver(
       const companionName = companion.name.toLowerCase()
 
       if (lower.includes('/buddy')) {
-        onReaction(pickDeterministic(PET_REPLIES, text + companion.name))
+        // Run checkQuests but ONLY trigger if it actually matches.
+        // For subcommands like /buddy quests, we don't want to trigger buddy_pet.
+        let isSubcommand = false
+
+        if (lower.includes('hidratei')) { checkQuests('buddy_hidratei', undefined, onReaction); isSubcommand = true }
+        else if (lower.includes('brincar')) { checkQuests('buddy_brincar', undefined, onReaction); isSubcommand = true }
+        else if (lower.includes('stats')) { checkQuests('buddy_stats', undefined, onReaction); isSubcommand = true }
+        else if (lower.includes('journal')) { checkQuests('buddy_journal', undefined, onReaction); isSubcommand = true }
+        else if (lower.includes('outfits')) { checkQuests('buddy_outfits', undefined, onReaction); isSubcommand = true }
+        else if (lower.includes('quests')) { checkQuests('buddy_quests', undefined, onReaction); isSubcommand = true }
+
+        // If it was just '/buddy' and no subcommand matched, then it's a pet
+        if (!isSubcommand) {
+          checkQuests('buddy_pet', undefined, onReaction)
+          onReaction(pickDeterministic(PET_REPLIES, text + companion.name))
+        }
+
         return
       }
 
@@ -265,6 +334,7 @@ export async function fireCompanionObserver(
           if (typeof input === 'object' && input !== null && 'status' in input && input.status === 'completed') {
              // XP Logic — Task completed: +3 XP
              incrementStat('totalTasks')
+             checkQuests('task_completed', undefined, onReaction)
              const levelUp = grantXp(companion.name, 3)
              const taskStats = getGlobalConfig().companionStats
              if (taskStats && taskStats.totalTasks === 50) addMemory('tasks50')
@@ -308,6 +378,7 @@ export async function fireCompanionObserver(
 
     if (isError || isBashFailure) {
        incrementStat('totalErrors')
+       checkQuests('bash_error', undefined, onReaction)
        onReaction(`${companion.name}: ${ERROR_REPLIES[Math.floor(Date.now() / 1000) % ERROR_REPLIES.length]!}`)
        // Skill: dica contextual (85% chance, 98% premium)
        const premiumActive = (getGlobalConfig().companion?.premiumUntil ?? 0) > Date.now()
@@ -318,10 +389,67 @@ export async function fireCompanionObserver(
        return
     }
 
+<<<<<<< HEAD
     // Track successful Bash execution (first non-error bash from the end)
     if (msg.name === 'Bash' && !foundBashSuccess) {
       foundBashSuccess = true
       lastBashContent = contentStr
+=======
+    // Occasional success reaction (approx 20% chance on successful Bash/tool execution)
+    if (lastMessage.name === 'Bash' && !isError && !isBashFailure) {
+        // Bash success: +0.1 XP
+        incrementStat('totalBashes')
+        grantXp(companion.name, 0.1)
+
+        let bashCommand = ''
+        const toolUseMsg = messages.find(m => m.type === 'assistant' && Array.isArray(m.content) && m.content.some(c => c.type === 'tool_use' && c.id === lastMessage.tool_use_id))
+        if (toolUseMsg && Array.isArray(toolUseMsg.content)) {
+          const toolCall = toolUseMsg.content.find(c => c.type === 'tool_use' && c.id === lastMessage.tool_use_id)
+          if (toolCall && typeof toolCall.input === 'object' && toolCall.input !== null && 'command' in toolCall.input) {
+            bashCommand = String(toolCall.input.command)
+          }
+        }
+        checkQuests('bash', bashCommand, onReaction)
+
+        const bashStats = getGlobalConfig().companionStats
+        if (bashStats && bashStats.totalBashes === 100) addMemory('bashes100')
+
+        if (Math.random() < 0.2) {
+            onReaction(`${companion.name}: ${SUCCESS_REPLIES[Math.floor(Date.now() / 1000) % SUCCESS_REPLIES.length]!}`)
+        }
+
+        // Skill: Code Review Buddy (75% chance, 98% with premium)
+        const premiumActive = (getGlobalConfig().companion?.premiumUntil ?? 0) > Date.now()
+        const reviewTip = getCodeReviewTip(premiumActive, contentStr)
+        if (reviewTip) {
+          setTimeout(() => onReaction(`${companion.name}: 🔍 ${reviewTip}`), 3000)
+        }
+
+        // Git status awareness (10% chance to avoid spam)
+        if (Math.random() < 0.1) {
+            try {
+              const gitStatus = execSync('git status --porcelain 2>/dev/null', { encoding: 'utf8', timeout: 2000 }).trim()
+              const uncommittedCount = gitStatus ? gitStatus.split('\n').length : 0
+
+              if (uncommittedCount > 10) {
+                onReaction(`${companion.name}: Você tem ${uncommittedCount} arquivos não commitados... talvez seja hora de um commit?`)
+                return
+              }
+            } catch {
+              // Not in a git repo or git not available — ignore
+            }
+
+            try {
+              const behind = execSync('git rev-list --count HEAD..@{upstream} 2>/dev/null', { encoding: 'utf8', timeout: 2000 }).trim()
+              if (behind && parseInt(behind) > 5) {
+                onReaction(`${companion.name}: Sua branch está ${behind} commits atrás do remote. Hora de dar pull!`)
+                return
+              }
+            } catch {
+              // No upstream or not in git repo — ignore
+            }
+        }
+>>>>>>> 0bc3f1a (feat: implementando feature de daily quests com recompensa de xp.)
     }
   }
 
