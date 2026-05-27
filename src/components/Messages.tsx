@@ -58,7 +58,8 @@ const LogoHeader = React.memo(function LogoHeader(t0: { agentDefinitions?: Agent
   const { agentDefinitions } = t0;
   const model = useMainLoopModel();
   const text = useMemo(() => getStartupScreenText(model), [model]);
-  return <OffscreenFreeze><Box flexDirection="column" gap={1}><Ansi>{text}</Ansi><React.Suspense fallback={null}><StatusNotices agentDefinitions={agentDefinitions} /></React.Suspense></Box></OffscreenFreeze>;
+  const showBanner = isFullscreenEnvEnabled();
+  return <OffscreenFreeze><Box flexDirection="column" gap={1}>{showBanner && <Ansi>{text}</Ansi>}<React.Suspense fallback={null}><StatusNotices agentDefinitions={agentDefinitions} /></React.Suspense></Box></OffscreenFreeze>;
 });
 
 // Dead code elimination: conditional import for proactive mode
