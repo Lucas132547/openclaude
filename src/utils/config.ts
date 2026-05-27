@@ -314,16 +314,55 @@ export type GlobalConfig = {
     totalTasks: number
     totalErrors: number
     totalPets: number
+    totalReads: number
+    totalWrites: number
+    totalEdits: number
+    totalSearches: number
     daysActive: number
     totalTokensSaved: number
     totalFeedbackRules: number
     totalFeedbackConfirms: number
+    totalSessionMinutes: number
   }
+  companionLastSessionTick?: number
   companionLastAction?: Record<string, number>
   companionReminders?: Array<{ text: string; at: number; createdAt: number }>
   companionMemory?: Array<{ text: string; timestamp: number; trigger: string }>
   companionOutfits?: string[]
   companionActiveOutfit?: string
+  companionAchievements?: string[]
+  companionShop?: {
+    ownedAccessories: string[]
+    ownedThemes: string[]
+    ownedEmotes: string[]
+    ownedAbilities: string[]
+    activeAbilities: { id: string; expiresAt: number }[]
+    equippedAccessories: string[]
+    equippedTheme: string | null
+    equippedEmotes: string | null
+    equippedTitle: string | null
+    customTitle: string | null
+    xpShieldUntil: number | null
+    quickTipsUntil: number | null
+    codeReviewProUntil: number | null
+    xpBoostUntil: number | null
+    xpMagnetUntil: number | null
+    premiumUntil: number | null
+    nameGlowUntil: number | null
+    wallOfFameUntil: number | null
+    veteranLuckUnlocked: boolean
+    bugBuddyUnlocked: boolean
+    shieldUseCount: number
+    luckyBlocks: number
+  }
+  companionXpLossLog?: {
+    totalLost: number
+    lastLossDate: string
+    dailyLossToday: number
+    dailyLossDate: string
+    solitarioCount: number
+    lossesThisSession: number
+  }
 
   // Feedback survey tracking
   feedbackSurveyState?: {
