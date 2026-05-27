@@ -170,6 +170,10 @@ Avisa que você se hidratou e arrumou a postura! O buddy comemora com você e fi
 - **XP:** +0.5
 - **Cooldown:** 1 hora
 
+### `/buddy quests`
+
+Mostra o painel com as suas 3 missões diárias. Cada missão garante um bônus de XP após concluída.
+
 ### `/buddy resumo`
 
 Mostra um resumo da sessão atual.
@@ -607,6 +611,7 @@ A linha 0 de cada frame é reservada para o chapéu. Se não houver chapéu e to
 | `src/buddy/reminders.ts`        | Lembretes de produtividade e customizados                     |
 | `src/buddy/prompt.ts`           | Injeção no system prompt                                      |
 | `src/buddy/CompanionSprite.tsx` | Renderização visual (ASCII art 24x10 + outfits)               |
+| `src/buddy/quests.ts`           | Pool de Missões Diárias e gerador de rotinas                  |
 | `src/buddy/sprites.ts`          | Sprites das 24 espécies (24x10, 3 frames) + estilos de outfit |
 | `src/buddy/journal.ts`          | Diário do companion                                           |
 | `src/buddy/seasonal.ts`         | Eventos sazonais (7 eventos)                                  |
@@ -638,6 +643,10 @@ companionReminders?: Array<{...}>    // Lembretes customizados
 companionMemory?: Array<{...}>       // Memórias
 companionOutfits?: string[]          // Outfits desbloqueados
 companionActiveOutfit?: string       // Outfit equipado
+companionQuests?: {                  // Progresso das missões
+  date: string
+  completed: Record<string, boolean>
+}
 ```
 
 ---

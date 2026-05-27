@@ -12,6 +12,8 @@ import { addMemory } from './memory.js'
 import { checkAndGrantAchievementXp } from './achievements.js'
 import { tryLoseXp, checkBuddySolitario, getXpMultiplier } from './xp-loss.js'
 import { getEmoteReaction, getShop } from './shop.js'
+import { getTodayQuests, getTodayString as getQuestTodayString } from './quests.js'
+import type { Quest } from './quests.js'
 
 const DIRECT_REPLIES = [
   'Estou observando.',
@@ -170,29 +172,7 @@ function trackSessionTime() {
   }
 }
 
-function incrementStat(stat: 'totalBashes' | 'totalTasks' | 'totalErrors' | 'totalReads' | 'totalWrites' | 'totalEdits' | 'totalSearches') {
-  saveGlobalConfig(curr => ({
-    ...curr,
-    companionStats: {
-      totalBashes: curr.companionStats?.totalBashes ?? 0,
-      totalTasks: curr.companionStats?.totalTasks ?? 0,
-      totalErrors: curr.companionStats?.totalErrors ?? 0,
-      totalPets: curr.companionStats?.totalPets ?? 0,
-      totalReads: curr.companionStats?.totalReads ?? 0,
-      totalWrites: curr.companionStats?.totalWrites ?? 0,
-      totalEdits: curr.companionStats?.totalEdits ?? 0,
-      totalSearches: curr.companionStats?.totalSearches ?? 0,
-      daysActive: curr.companionStats?.daysActive ?? 0,
-      totalTokensSaved: curr.companionStats?.totalTokensSaved ?? 0,
-      totalFeedbackRules: curr.companionStats?.totalFeedbackRules ?? 0,
-      totalFeedbackConfirms: curr.companionStats?.totalFeedbackConfirms ?? 0,
-      totalSessionMinutes: curr.companionStats?.totalSessionMinutes ?? 0,
-      [stat]: (curr.companionStats?.[stat] ?? 0) + 1,
-    },
-  }))
-}
-
-function grantXp(companionName: string, amount: number): number | null {
+function grantXp(amount: number): number | null {
   let newLevel: number | null = null
 
   saveGlobalConfig(curr => {
@@ -237,6 +217,57 @@ function findToolNameForId(messages: Message[], toolUseId: string): string | und
   return undefined
 }
 
+function checkQuests(actionType: string, payload?: string, onReaction?: (reaction: string) => void) {
+  const companion = getCompanion()
+  if (!companion) return
+
+  const today = getQuestTodayString()
+  const quests = getTodayQuests()
+  const config = getGlobalConfig()
+
+  let questData = config.companionQuests
+  if (questData?.date !== today) {
+    questData = { date: today, completed: {} }
+  }
+
+  const newlyCompleted: Quest[] = []
+
+  for (const q of quests) {
+    if (questData.completed[q.id]) continue
+
+    let isCompleted = false
+    switch(q.id) {
+      case 'bash_long': isCompleted = (actionType === 'bash' && payload !== undefined && payload.length > 50); break;
+      case 'bash_git': isCompleted = (actionType === 'bash' && payload !== undefined && payload.startsWith('git ')); break;
+      case 'bash_npm': isCompleted = (actionType === 'bash' && payload !== undefined && (payload.startsWith('npm ') || payload.startsWith('yarn ') || payload.startsWith('pnpm '))); break;
+      case 'bash_error': isCompleted = (actionType === 'bash_error'); break;
+      case 'task_completed': isCompleted = (actionType === 'task_completed'); break;
+      case 'buddy_pet': isCompleted = (actionType === 'buddy_pet'); break;
+      case 'buddy_brincar': isCompleted = (actionType === 'buddy_brincar'); break;
+      case 'buddy_hidratei': isCompleted = (actionType === 'buddy_hidratei'); break;
+      case 'buddy_stats': isCompleted = (actionType === 'buddy_stats'); break;
+      case 'buddy_journal': isCompleted = (actionType === 'buddy_journal'); break;
+      case 'buddy_outfits': isCompleted = (actionType === 'buddy_outfits'); break;
+      case 'buddy_quests': isCompleted = (actionType === 'buddy_quests'); break;
+    }
+
+    if (isCompleted) {
+      questData.completed[q.id] = true
+      newlyCompleted.push(q)
+    }
+  }
+
+  if (newlyCompleted.length > 0) {
+    saveGlobalConfig(curr => ({ ...curr, companionQuests: questData }))
+    for (const q of newlyCompleted) {
+       grantXp(q.xpReward)
+       if (onReaction) {
+         setTimeout(() => onReaction(`${companion.name}: 🎯 Quest diária concluída: "${q.description}" (+${q.xpReward} XP)`), 1500)
+       }
+    }
+  }
+}
+
 export async function fireCompanionObserver(
   messages: Message[],
   onReaction: (reaction: string | undefined) => void,
@@ -254,6 +285,7 @@ export async function fireCompanionObserver(
     if (text) {
       const lower = text.toLowerCase()
       const companionName = companion.name.toLowerCase()
+
       if (
         lower.includes('/buddy') ||
         /\bstoneage\b/i.test(lower) ||
@@ -287,13 +319,44 @@ export async function fireCompanionObserver(
           const companionName = companion.name.toLowerCase()
 
           if (lower.includes('/buddy')) {
-            onReaction(pickDeterministic(PET_REPLIES, text + companion.name))
+            // Run checkQuests but ONLY trigger if it actually matches.
+            let isSubcommand = false
+
+            // Nossas subquests específicas
+            if (lower.includes('hidratei')) { checkQuests('buddy_hidratei', undefined, onReaction); isSubcommand = true }
+            else if (lower.includes('brincar')) { checkQuests('buddy_brincar', undefined, onReaction); isSubcommand = true }
+            else if (lower.includes('stats')) { checkQuests('buddy_stats', undefined, onReaction); isSubcommand = true }
+            else if (lower.includes('journal')) { checkQuests('buddy_journal', undefined, onReaction); isSubcommand = true }
+            else if (lower.includes('outfits')) { checkQuests('buddy_outfits', undefined, onReaction); isSubcommand = true }
+            else if (lower.includes('quests')) { checkQuests('buddy_quests', undefined, onReaction); isSubcommand = true }
+
+            // Qualquer outro subcomando listado na CLI
+            else if (
+              lower.includes('status') || lower.includes('mute') || lower.includes('unmute') ||
+              lower.includes('compact') || lower.includes('decompact') || lower.includes('preview') ||
+              lower.includes('rename') || lower.includes('reroll') || lower.includes('alimentar') ||
+              lower.includes('equipar') || lower.includes('chapeu') || lower.includes('resumo') ||
+              lower.includes('lembrar') || lower.includes('memorias') || lower.includes('evolve') ||
+              lower.includes('requisitos') || lower.includes('premium') || lower.includes('achievements') ||
+              lower.includes('help') || lower.includes('shop') || lower.includes('buy') ||
+              lower.includes('equip') || lower.includes('unequip') || lower.includes('inventory') ||
+              lower.includes('abilities') || lower.includes('draw')
+            ) {
+              isSubcommand = true
+            }
+
+            // If it was just '/buddy' and no subcommand matched, then it's a pet
+            if (!isSubcommand) {
+              checkQuests('buddy_pet', undefined, onReaction)
+              onReaction(pickDeterministic(PET_REPLIES, text + companion.name))
+            }
+
             return
           }
 
           // Stoneage mode detection — token compression mode
           if (/\bstoneage\b/i.test(lower)) {
-            const levelUp = grantXp(companion.name, 0.5)
+            const levelUp = grantXp(0.5)
             saveGlobalConfig(curr => ({
               ...curr,
               companionStats: {
@@ -328,7 +391,7 @@ export async function fireCompanionObserver(
           // Easter Egg: Konami Code detection
           const konamiResult = checkKonamiCode(text, companion.konamiUsed)
           if (konamiResult.triggered) {
-            grantXp(companion.name, konamiResult.xpBonus!)
+            grantXp(konamiResult.xpBonus!)
             addMemory('konami')
             saveGlobalConfig(curr => ({
               ...curr,
@@ -439,6 +502,7 @@ export async function fireCompanionObserver(
               ? `${companion.name}: Uau! Subi para o Nível ${tempLevelUp} e ganhei um chapéu novo!`
               : `${companion.name}: ${TASK_COMPLETED_REPLIES[Math.floor(Date.now() / 1000) % TASK_COMPLETED_REPLIES.length]!}`
             setReactionCandidate(reactionText, 6)
+            checkQuests('task_completed', undefined, onReaction)
           }
         }
       }
@@ -463,6 +527,7 @@ export async function fireCompanionObserver(
   // --- Scan messages for tool_result blocks (errors + bash success) ---
   let foundBashSuccess = false
   let lastBashContent = ''
+  let bashCommandStr = ''
 
   for (const msg of messages) {
     let toolResultBlocks: any[] = []
@@ -492,6 +557,16 @@ export async function fireCompanionObserver(
         /Exit code -?[1-9]\d*/.test(contentStr)
       )
 
+      if (isBashTool && block.tool_use_id) {
+        const toolUseMsg = messages.find(m => m.type === 'assistant' && Array.isArray(m.content) && m.content.some((c: any) => c.type === 'tool_use' && c.id === block.tool_use_id))
+        if (toolUseMsg && Array.isArray(toolUseMsg.content)) {
+          const toolCall = toolUseMsg.content.find((c: any) => c.type === 'tool_use' && c.id === block.tool_use_id)
+          if (toolCall && typeof toolCall.input === 'object' && toolCall.input !== null && 'command' in toolCall.input) {
+            bashCommandStr = String(toolCall.input.command)
+          }
+        }
+      }
+
       // Error reaction (Priority 3)
       if (isError || isBashFailure) {
         addStat('totalErrors')
@@ -512,6 +587,7 @@ export async function fireCompanionObserver(
           if (lossResult.lost && lossResult.reaction) {
             setTimeout(() => onReaction(`${companion.name}: ${lossResult.reaction}`), 1500)
           }
+          checkQuests('bash_error', undefined, onReaction)
         } else {
           const lossResult = tryLoseXp('ferramenta_quebrada')
           if (lossResult.lost && lossResult.reaction) {
@@ -521,6 +597,7 @@ export async function fireCompanionObserver(
       } else if (isBashTool) {
         foundBashSuccess = true
         lastBashContent = contentStr
+        checkQuests('bash', bashCommandStr, onReaction)
       } else if (isReadTool) {
         addStat('totalReads')
         addXp(0.001)
@@ -552,6 +629,7 @@ export async function fireCompanionObserver(
   if (foundBashSuccess) {
     addStat('totalBashes')
     addXp(0.01)
+
     const bashStats = getGlobalConfig().companionStats
     if (bashStats && (bashStats.totalBashes + totalBashesAdded) === 100) addMemory('bashes100')
 

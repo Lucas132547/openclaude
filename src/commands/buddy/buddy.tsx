@@ -61,6 +61,8 @@ import {
   formatAbilities,
 } from "../../buddy/shop.js";
 
+import { getTodayQuests, getTodayString } from '../../buddy/quests.js'
+
 const NAME_PREFIXES = [
   "Byte",
   "Echo",
@@ -235,6 +237,27 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
       });
       return null;
     }
+
+    // Force observer validation for 'stats' to complete itself
+    saveGlobalConfig(current => {
+      const today = getTodayString()
+      let questData = current.companionQuests
+      if (questData?.date !== today) questData = { date: today, completed: {} }
+
+      const q = getTodayQuests().find(q => q.id === 'buddy_stats')
+      if (q && !questData.completed[q.id]) {
+        questData.completed[q.id] = true
+        return {
+          ...current,
+          companionQuests: questData,
+          companion: current.companion ? {
+            ...current.companion,
+            xp: Math.round(((current.companion.xp ?? 0) + q.xpReward) * 10) / 10
+          } : undefined
+        }
+      }
+      return current
+    })
 
     const config = getGlobalConfig();
     const stats = config.companionStats ?? {
@@ -530,6 +553,27 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
       return null;
     }
 
+    // Force observer validation for 'brincar' to complete itself
+    saveGlobalConfig(current => {
+      const today = getTodayString()
+      let questData = current.companionQuests
+      if (questData?.date !== today) questData = { date: today, completed: {} }
+
+      const q = getTodayQuests().find(q => q.id === 'buddy_brincar')
+      if (q && !questData.completed[q.id]) {
+        questData.completed[q.id] = true
+        return {
+          ...current,
+          companionQuests: questData,
+          companion: current.companion ? {
+            ...current.companion,
+            xp: Math.round(((current.companion.xp ?? 0) + q.xpReward) * 10) / 10
+          } : undefined
+        }
+      }
+      return current
+    })
+
     const config = getGlobalConfig();
     const lastBrincar = config.companionLastAction?.brincar ?? 0;
     const now = Date.now();
@@ -651,6 +695,27 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
       return null
     }
 
+    // Force observer validation for 'hidratei' to complete itself
+    saveGlobalConfig(current => {
+      const today = getTodayString()
+      let questData = current.companionQuests
+      if (questData?.date !== today) questData = { date: today, completed: {} }
+
+      const q = getTodayQuests().find(q => q.id === 'buddy_hidratei')
+      if (q && !questData.completed[q.id]) {
+        questData.completed[q.id] = true
+        return {
+          ...current,
+          companionQuests: questData,
+          companion: current.companion ? {
+            ...current.companion,
+            xp: Math.round(((current.companion.xp ?? 0) + q.xpReward) * 10) / 10
+          } : undefined
+        }
+      }
+      return current
+    })
+
     const config = getGlobalConfig()
     const lastHidratei = config.companionLastAction?.hidratei ?? 0
     const now = Date.now()
@@ -699,7 +764,49 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
     return null
   }
 
-  if (arg === "outfits") {
+  if (arg === 'quests') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('Nenhum buddy ainda. Use /buddy para criar um.', { display: 'system' })
+      return null
+    }
+
+    // Force observer validation for 'quests' to complete itself
+    saveGlobalConfig(current => {
+      const today = getTodayString()
+      let questData = current.companionQuests
+      if (questData?.date !== today) questData = { date: today, completed: {} }
+
+      const q = getTodayQuests().find(q => q.id === 'buddy_quests')
+      if (q && !questData.completed[q.id]) {
+        questData.completed[q.id] = true
+        return {
+          ...current,
+          companionQuests: questData,
+          companion: current.companion ? {
+            ...current.companion,
+            xp: Math.round(((current.companion.xp ?? 0) + q.xpReward) * 10) / 10
+          } : undefined
+        }
+      }
+      return current
+    })
+
+    const quests = getTodayQuests()
+    const config = getGlobalConfig()
+    const today = getTodayString()
+    const questData = config.companionQuests?.date === today ? config.companionQuests : { completed: {} }
+
+    const list = quests.map(q => {
+      const isCompleted = questData.completed[q.id]
+      return `  [${isCompleted ? 'x' : ' '}] ${q.description} (+${q.xpReward} XP)`
+    }).join('\n')
+
+    onDone(`📋 Missões Diárias do ${companion.name}:\n\n${list}`, { display: 'system' })
+    return null
+  }
+
+  if (arg === 'outfits') {
     const companion = getCompanion()
     if (!companion) {
       onDone("Nenhum buddy ainda. Use /buddy para criar um.", {
@@ -708,8 +815,29 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
       return null;
     }
 
-    const unlocked = getUnlockedOutfits();
-    const active = getActiveOutfit();
+    // Force observer validation for 'outfits' to complete itself
+    saveGlobalConfig(current => {
+      const today = getTodayString()
+      let questData = current.companionQuests
+      if (questData?.date !== today) questData = { date: today, completed: {} }
+
+      const q = getTodayQuests().find(q => q.id === 'buddy_outfits')
+      if (q && !questData.completed[q.id]) {
+        questData.completed[q.id] = true
+        return {
+          ...current,
+          companionQuests: questData,
+          companion: current.companion ? {
+            ...current.companion,
+            xp: Math.round(((current.companion.xp ?? 0) + q.xpReward) * 10) / 10
+          } : undefined
+        }
+      }
+      return current
+    })
+
+    const unlocked = getUnlockedOutfits()
+    const active = getActiveOutfit()
 
     const list = OUTFITS.map((o) => {
       const isUnlocked = unlocked.includes(o.id);
@@ -1021,6 +1149,28 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
       });
       return null;
     }
+
+    // Force observer validation for 'journal' if run as a direct hook (bypass standard observer loop gap)
+    saveGlobalConfig(current => {
+      const today = getTodayString()
+      let questData = current.companionQuests
+      if (questData?.date !== today) questData = { date: today, completed: {} }
+
+      const q = getTodayQuests().find(q => q.id === 'buddy_journal')
+      if (q && !questData.completed[q.id]) {
+        questData.completed[q.id] = true
+        return {
+          ...current,
+          companionQuests: questData,
+          companion: current.companion ? {
+            ...current.companion,
+            xp: Math.round(((current.companion.xp ?? 0) + q.xpReward) * 10) / 10
+          } : undefined
+        }
+      }
+      return current
+    })
+
     const entry = getTodayJournal();
     onDone(formatJournal(entry), { display: "system" });
     return null;
