@@ -18,6 +18,7 @@ const MEMORY_TRIGGERS = {
   midnightEvolve: () => 'Evoluiu na meia-noite! Poder das trevas!',
   loopInfinite: () => 'Sobreviveu a um loop infinito!',
   answer42: () => 'Encontrou a resposta para tudo!',
+  stoneageFirst: () => 'Ativou o stoneage pela primeira vez! Pedra afiada!',
 } as const
 
 export type MemoryTrigger = keyof typeof MEMORY_TRIGGERS

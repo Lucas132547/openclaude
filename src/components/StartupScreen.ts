@@ -173,10 +173,7 @@ function boxRow(content: string, width: number, rawLen: number, border: RGB): st
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export function printStartupScreen(modelOverride?: string): void {
-  // Skip in non-interactive / CI / print mode
-  if (process.env.CI || !process.stdout.isTTY) return
-
+export function getStartupScreenText(modelOverride?: string): string {
   const palette = resolveLogoPalette(getGlobalConfig().logoColor)
   const ACCENT = palette.accent
   const CREAM = palette.cream
@@ -237,5 +234,12 @@ export function printStartupScreen(modelOverride?: string): void {
   out.push(`  ${DIM}${ansiRgb(...DIMCOL)}openclaude ${RESET}${ansiRgb(...ACCENT)}v${MACRO.DISPLAY_VERSION ?? MACRO.VERSION}${RESET}`)
   out.push('')
 
-  process.stdout.write(out.join('\n') + '\n')
+  return out.join('\n') + '\n'
+}
+
+export function printStartupScreen(modelOverride?: string): void {
+  // Skip in non-interactive / CI / print mode
+  if (process.env.CI || !process.stdout.isTTY) return
+
+  process.stdout.write(getStartupScreenText(modelOverride))
 }

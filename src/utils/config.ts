@@ -315,6 +315,9 @@ export type GlobalConfig = {
     totalErrors: number
     totalPets: number
     daysActive: number
+    totalTokensSaved: number
+    totalFeedbackRules: number
+    totalFeedbackConfirms: number
   }
   companionLastAction?: Record<string, number>
   companionReminders?: Array<{ text: string; at: number; createdAt: number }>

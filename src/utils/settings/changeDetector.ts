@@ -38,6 +38,18 @@ const FILE_STABILITY_THRESHOLD_MS = 1000
 const FILE_STABILITY_POLL_INTERVAL_MS = 500
 
 /**
+ * Bun's native fs.watch() has a PathWatcherManager deadlock.
+ * Workaround: use stat() polling under Bun. No FSWatcher = no deadlock.
+ */
+const USE_POLLING = typeof Bun !== 'undefined'
+
+/**
+ * Polling interval for chokidar when usePolling is enabled.
+ */
+const POLLING_INTERVAL_MS = 2000
+
+
+/**
  * Time window in milliseconds to consider a file change as internal.
  * If a file change occurs within this window after markInternalWrite() is called,
  * it's assumed to be from Claude Code itself and won't trigger a notification.
@@ -136,7 +148,8 @@ export async function initialize(): Promise<void> {
     },
     // Additional options for stability
     ignorePermissionErrors: true,
-    usePolling: false, // Use native file system events
+    usePolling: USE_POLLING,
+    interval: POLLING_INTERVAL_MS,
     atomic: true, // Handle atomic writes better
   })
 

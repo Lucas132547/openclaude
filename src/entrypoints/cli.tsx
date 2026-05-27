@@ -160,8 +160,13 @@ async function main(): Promise<void> {
   const earlyModelFlag = eagerParseCliFlag('--model')
 
   // Print the gradient startup screen before the Ink UI loads
-  const { printStartupScreen } = await import('../components/StartupScreen.js')
-  printStartupScreen(earlyModelFlag)
+  // If we are about to enter Alternate Screen (fullscreen mode), printing to stdout
+  // causes the logo to flash and immediately disappear. In that case, we skip it.
+  const { isFullscreenEnvEnabled } = await import('../utils/fullscreen.js')
+  if (!isFullscreenEnvEnabled()) {
+    const { printStartupScreen } = await import('../components/StartupScreen.js')
+    printStartupScreen(earlyModelFlag)
+  }
 
   // For all other paths, load the startup profiler
   const {

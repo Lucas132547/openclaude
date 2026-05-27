@@ -1,6 +1,6 @@
 {
   "name": "@gitlawb/openclaude",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "description": "OpenClaude opens coding-agent workflows to any LLM — OpenAI, Gemini, DeepSeek, Ollama, and 200+ models",
   "type": "module",
   "bin": {
@@ -131,7 +131,7 @@
     "usehooks-ts": "3.1.1",
     "vscode-languageserver-protocol": "3.17.5",
     "wrap-ansi": "9.0.2",
-    "ws": "8.20.0",
+    "ws": "^8.21.0",
     "xss": "1.0.15",
     "yaml": "2.8.3",
     "zod": "3.25.76"
@@ -165,6 +165,7 @@
     "access": "public"
   },
   "overrides": {
-    "lodash-es": "4.18.1"
+    "lodash-es": "4.18.1",
+    "uuid": "^11.1.1"
   }
 }

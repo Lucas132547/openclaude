@@ -1,6 +1,14 @@
 import type { Message } from '../types/message.js'
 import { logFeedbackEvent } from '../memdir/feedbackLog.js'
 
+export type FeedbackDetectionResult = {
+  detected: boolean
+  type: 'correction' | 'undo'
+  file?: string
+  message: string
+  originalText?: string
+}
+
 const UNDO_PATTERNS = [
   /\bdesfaz(er)?\b/i,
   /\bdesfiz\b/i,
@@ -51,6 +59,17 @@ export function extractLastEditedFiles(messages: Message[]): string[] {
   return [...new Set(files)]
 }
 
+// ─── Last detected feedback (module-level, consumed by observer) ────────
+let lastDetectedFeedback: FeedbackDetectionResult | null = null
+
+export function getLastDetectedFeedback(): FeedbackDetectionResult | null {
+  return lastDetectedFeedback
+}
+
+export function clearLastDetectedFeedback(): void {
+  lastDetectedFeedback = null
+}
+
 /**
  * Inspects a user message for corrections or undos, logs the event, and returns a proposal notice if a pattern is matched.
  */
@@ -58,12 +77,7 @@ export async function detectAndLogFeedback(
   input: string,
   messages: Message[],
   sessionId?: string,
-): Promise<{
-  detected: boolean
-  message: string
-  file?: string
-  originalText?: string
-} | null> {
+): Promise<FeedbackDetectionResult | null> {
   if (!input || !messages) return null
 
   const lastEditedFiles = extractLastEditedFiles(messages)
@@ -96,11 +110,13 @@ export async function detectAndLogFeedback(
     )
 
     if (matchedFile) {
-      return {
+      lastDetectedFeedback = {
         detected: true,
+        type: 'undo' as const,
         file: matchedFile,
         message: `[Feedback System] Notei que você desfez minha edição em \`${matchedFile}\`. Quer que eu salve isso como um padrão aprendido? Use "/feedback confirm" para registrar ou ignore.`,
       }
+      return lastDetectedFeedback
     }
   }
 
@@ -132,11 +148,13 @@ export async function detectAndLogFeedback(
       sessionId,
     )
 
-    return {
+    lastDetectedFeedback = {
       detected: true,
+      type: 'correction' as const,
       originalText,
       message: `[Feedback System] Notei uma correção: "${input}". Quer que eu salve isso como um padrão aprendido? Use "/feedback confirm" para registrar ou ignore.`,
     }
+    return lastDetectedFeedback
   }
 
   return null
