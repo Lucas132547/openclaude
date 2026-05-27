@@ -30,6 +30,7 @@ Execute `/buddy` pela primeira vez para chocar seu companion. Ele será gerado d
 | Alimentar        | +0.5   | `/buddy alimentar` (cooldown: 1h)            |
 | Hidratei         | +0.5   | `/buddy hidratei` (cooldown: 1h)           |
 | Quests Diárias   | +1 a +5| Completar missões listadas em `/buddy quests` |
+<<<<<<< HEAD
 | Feedback confirm | +2     | `/feedback confirm` — consolida aprendizado |
 | Stoneage ativado | +0.5   | Cada ativação do modo stoneage               |
 | Streak 3 dias    | +0.5   | Bônus por 3 dias seguidos                     |
@@ -37,6 +38,13 @@ Execute `/buddy` pela primeira vez para chocar seu companion. Ele será gerado d
 | Streak 14 dias   | +2     | Bônus por 14 dias seguidos                    |
 | Streak 30 dias   | +3     | Bônus por 30 dias seguidos                    |
 | Easter egg       | +3~+20 | Vários tipos (ver seção Easter Eggs)        |
+=======
+| Streak 3 dias    | +0.5   | Bônus por 3 dias seguidos                  |
+| Streak 7 dias    | +1     | Bônus por 7 dias seguidos                  |
+| Streak 14 dias   | +2     | Bônus por 14 dias seguidos                 |
+| Streak 30 dias   | +3     | Bônus por 30 dias seguidos                 |
+| Easter egg       | +3~+20 | Vários tipos (ver seção Easter Eggs)       |
+>>>>>>> 0bc3f1a (feat: implementando feature de daily quests com recompensa de xp.)
 
 ### Níveis e Chapéus
 
@@ -158,6 +166,10 @@ Avisa que você se hidratou e arrumou a postura! O buddy comemora com você e fi
 
 - **XP:** +0.5
 - **Cooldown:** 1 hora
+
+### `/buddy quests`
+
+Mostra o painel com as suas 3 missões diárias. Cada missão garante um bônus de XP após concluída.
 
 ### `/buddy resumo`
 
@@ -588,9 +600,16 @@ A linha 0 de cada frame é reservada para o chapéu. Se não houver chapéu e to
 | `src/buddy/evolution.ts`        | Sistema de evolução (8 cadeias)                              |
 | `src/buddy/easter-eggs.ts`      | Easter eggs (7 tipos)                                          |
 | `src/buddy/streak.ts`           | Sistema de streak diário                                      |
+<<<<<<< HEAD
 | `src/buddy/reminders.ts`        | Lembretes de produtividade e customizados                      |
 | `src/buddy/prompt.ts`           | Injeção no system prompt                                     |
 | `src/buddy/CompanionSprite.tsx` | Renderização visual (ASCII art 24x10 + outfits)              |
+=======
+| `src/buddy/reminders.ts`        | Lembretes de produtividade e customizados                     |
+| `src/buddy/quests.ts`           | Pool de Missões Diárias e gerador de rotinas                  |
+| `src/buddy/prompt.ts`           | Injeção no system prompt                                      |
+| `src/buddy/CompanionSprite.tsx` | Renderização visual (ASCII art 24x10 + outfits)               |
+>>>>>>> 0bc3f1a (feat: implementando feature de daily quests com recompensa de xp.)
 | `src/buddy/sprites.ts`          | Sprites das 24 espécies (24x10, 3 frames) + estilos de outfit |
 | `src/buddy/journal.ts`          | Diário do companion                                           |
 | `src/buddy/seasonal.ts`         | Eventos sazonais (7 eventos)                                   |
@@ -622,6 +641,10 @@ companionReminders?: Array<{...}>    // Lembretes customizados
 companionMemory?: Array<{...}>       // Memórias
 companionOutfits?: string[]          // Outfits desbloqueados
 companionActiveOutfit?: string       // Outfit equipado
+companionQuests?: {                  // Progresso das missões
+  date: string
+  completed: Record<string, boolean>
+}
 ```
 
 ---
