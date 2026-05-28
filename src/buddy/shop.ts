@@ -87,7 +87,10 @@ const DEFAULT_SHOP: CompanionShop = {
 }
 
 export function getShop(): CompanionShop {
-  return getGlobalConfig().companionShop ?? { ...DEFAULT_SHOP }
+  const raw = getGlobalConfig().companionShop
+  if (!raw) return { ...DEFAULT_SHOP }
+  // Merge with defaults to ensure new fields exist
+  return { ...DEFAULT_SHOP, ...raw }
 }
 
 function saveShop(updater: (shop: CompanionShop) => CompanionShop): void {
