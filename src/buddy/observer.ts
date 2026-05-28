@@ -10,6 +10,7 @@ import { getErrorTip, getCodeReviewTip } from './skills.js'
 import { checkKonamiCode, checkAnswer42 } from './easter-eggs.js'
 import { addMemory } from './memory.js'
 import { checkAndGrantAchievementXp } from './achievements.js'
+import { tryLoseXp, checkBuddySolitario, getXpMultiplier } from './xp-loss.js'
 
 const DIRECT_REPLIES = [
   'Estou observando.',
@@ -270,6 +271,12 @@ export async function fireCompanionObserver(
     trackActiveDay()
     trackSessionTime()
 
+    // Check Buddy Solitário (once per session start)
+    const solitarioResult = checkBuddySolitario()
+    if (solitarioResult.lost && solitarioResult.reaction) {
+      setTimeout(() => onReaction(`${companion.name}: ${solitarioResult.reaction}`), 3000)
+    }
+
     const runCore = async () => {
       // 1. Process explicit user interactions first
       if (lastUser) {
@@ -498,6 +505,18 @@ export async function fireCompanionObserver(
             }
           },
         )
+        // XP Loss: Bug Crítico (bash errors) or Ferramenta Quebrada (tool errors)
+        if (isBashFailure) {
+          const lossResult = tryLoseXp('bug_critico')
+          if (lossResult.lost && lossResult.reaction) {
+            setTimeout(() => onReaction(`${companion.name}: ${lossResult.reaction}`), 1500)
+          }
+        } else {
+          const lossResult = tryLoseXp('ferramenta_quebrada')
+          if (lossResult.lost && lossResult.reaction) {
+            setTimeout(() => onReaction(`${companion.name}: ${lossResult.reaction}`), 1500)
+          }
+        }
       } else if (isBashTool) {
         foundBashSuccess = true
         lastBashContent = contentStr
@@ -622,7 +641,8 @@ export async function fireCompanionObserver(
         totalSessionMinutes: currentStats.totalSessionMinutes + elapsedMinutes,
       }
 
-      const newXp = Math.round(((curr.companion.xp ?? 0) + xpAdded) * 1000) / 1000
+      const multiplier = getXpMultiplier()
+      const newXp = Math.round(((curr.companion.xp ?? 0) + xpAdded * multiplier) * 1000) / 1000
       const newLevelInfo = getLevelInfo(newXp)
 
       return {
