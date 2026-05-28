@@ -95,8 +95,9 @@ export async function initialize(): Promise<void> {
       // because clearCommandsCache would call clearSkillCaches which
       // wipes out the dynamic skills we just loaded
       clearCommandMemoizationCaches()
-      // Notify listeners that skills changed
-      skillsChanged.emit()
+      // Do NOT call skillsChanged.emit() here. Dynamic skills are loaded for use
+      // by the model, so we do not need to trigger a full React UI re-render and
+      // disk re-scan in the middle of a model turn.
     })
   }
 

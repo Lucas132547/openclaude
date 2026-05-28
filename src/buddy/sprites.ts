@@ -971,6 +971,130 @@ export type OutfitStyle = {
   keepRarityColor?: boolean; // If true, keep rarity color even if color is set
 };
 
+export type ThemeStyle = {
+  color?: string; // Override text color
+  extraTop?: string[];
+  extraBottom?: string[];
+  dimColor?: boolean;
+};
+
+const THEME_STYLES: Record<string, ThemeStyle> = {
+  'fundo-noturno': {
+    color: 'blue',
+    extraTop: ['    ✦  ·  ✦    ·   ✦    '],
+    extraBottom: ['   ·    ✦   ·    ✦   ·  '],
+  },
+  'fundo-oceanico': {
+    color: 'cyan',
+    extraTop: ['   ~  ~  ~  ~  ~  ~  ~  '],
+    extraBottom: ['  ~  ~  ~  ~  ~  ~  ~   '],
+  },
+  'fundo-espacial': {
+    color: 'magenta',
+    extraTop: ['  ✦  ·  ✦  ·  ✦  ·  ✦  '],
+    extraBottom: ['  ·  ✦  ·  ✦  ·  ✦  ·  '],
+  },
+  'fogo': {
+    color: 'red',
+    extraTop: ['    🔥  🔥  🔥  🔥  🔥   '],
+    extraBottom: ['   🔥  🔥  🔥  🔥  🔥    '],
+  },
+  'neve': {
+    color: 'white',
+    extraTop: ['   ❄  ·  ❄  ·  ❄  ·  ❄ '],
+    extraBottom: ['  ·  ❄  ·  ❄  ·  ❄  ·  '],
+  },
+  'glitch': {
+    color: 'green',
+    extraTop: ['   ▓▒░ GLITCH ░▒▓       '],
+    extraBottom: ['   ░▒▓ GLITCH ▓▒░       '],
+  },
+  'pixel-hearts': {
+    color: 'red',
+    extraTop: ['    ♥  ♥  ♥  ♥  ♥  ♥    '],
+    extraBottom: ['   ♥  ♥  ♥  ♥  ♥  ♥     '],
+  },
+}
+
+export function getThemeStyle(themeId: string | null): ThemeStyle | undefined {
+  if (!themeId) return undefined
+  return THEME_STYLES[themeId]
+}
+
+export type AccessoryStyle = {
+  eye?: string; // Custom eye (single, applies to both)
+  leftEye?: string; // Custom left eye only (for monoculo)
+  rightEye?: string; // Custom right eye only (for monoculo)
+  extraTop?: string[]; // Extra lines above sprite
+  extraBottom?: string[]; // Extra lines below sprite
+};
+
+const ACCESSORY_STYLES: Record<string, AccessoryStyle> = {
+  oculos: {
+    leftEye: '■',
+    rightEye: '■',
+  },
+  monoculo: {
+    leftEye: '◉',
+  },
+  laco: {
+    extraBottom: ['        ╱╲╱╲             '],
+  },
+  bandana: {
+    extraTop: ['      ▓▓▓▓▓▓▓▓           '],
+  },
+  'coroa-flores': {
+    extraTop: ['     🌸🌼🌸🌼🌸           '],
+  },
+  chifres: {
+    extraTop: ['     /\\      /\\           '],
+  },
+  asas: {
+    extraTop: ['  ╱              ╲       '],
+    extraBottom: ['  ╲              ╱       '],
+  },
+  capa: {
+    extraBottom: ['   ╲|            |╱      ', '    ╲____________╱       '],
+  },
+  mochila: {
+    extraBottom: ['       [████]            '],
+  },
+  aura: {
+    extraTop: ['    ·  ·  ·  ·  ·  ·     '],
+    extraBottom: ['    ·  ·  ·  ·  ·  ·     '],
+  },
+}
+
+export function getAccessoryStyles(accessoryIds: string[]): AccessoryStyle[] {
+  return accessoryIds
+    .map(id => ACCESSORY_STYLES[id])
+    .filter((s): s is AccessoryStyle => !!s)
+}
+
+export function mergeAccessoryStyles(styles: AccessoryStyle[]): {
+  eye?: string
+  leftEye?: string
+  rightEye?: string
+  extraTop: string[]
+  extraBottom: string[]
+} {
+  const result = {
+    eye: undefined as string | undefined,
+    leftEye: undefined as string | undefined,
+    rightEye: undefined as string | undefined,
+    extraTop: [] as string[],
+    extraBottom: [] as string[],
+  }
+  for (const style of styles) {
+    if (style.eye) result.eye = style.eye
+    if (style.leftEye) result.leftEye = style.leftEye
+    if (style.rightEye) result.rightEye = style.rightEye
+    if (style.extraTop) result.extraTop.push(...style.extraTop)
+    if (style.extraBottom) result.extraBottom.push(...style.extraBottom)
+  }
+  return result
+}
+
 const OUTFIT_STYLES: Record<string, OutfitStyle> = {
   dourado: {
     color: "yellow",

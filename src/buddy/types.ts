@@ -172,3 +172,53 @@ export const RARITY_COLORS = {
   epic: 'autoAccept',
   legendary: 'warning',
 } as const satisfies Record<Rarity, keyof import('../utils/theme.js').Theme>
+
+// ─── Shop Types ──────────────────────────────────────────────────────────────
+
+export type ShopCategory = 'acessorios' | 'temas' | 'titulos' | 'emotes' | 'abilities'
+
+export type ShopItem = {
+  id: string
+  name: string
+  description: string
+  price: number
+  category: ShopCategory
+  duration?: number // ms, undefined = permanente/uso único
+}
+
+export type CompanionShop = {
+  ownedAccessories: string[]
+  ownedThemes: string[]
+  ownedEmotes: string[]
+  ownedAbilities: string[]
+  ownedTitles: string[]
+  activeAbilities: { id: string; expiresAt: number }[]
+  equippedAccessories: string[] // max 3
+  equippedTheme: string | null
+  equippedEmotes: string | null
+  equippedTitle: string | null
+  customTitle: string | null
+  xpShieldUntil: number | null
+  quickTipsUntil: number | null
+  codeReviewProUntil: number | null
+  xpBoostUntil: number | null
+  xpMagnetUntil: number | null
+  premiumUntil: number | null
+  nameGlowUntil: number | null
+  wallOfFameUntil: number | null
+  veteranLuckUnlocked: boolean
+  bugBuddyUnlocked: boolean
+  shieldUseCount: number
+  luckyBlocks: number
+}
+
+// ─── XP Loss Types ───────────────────────────────────────────────────────────
+
+export type XpLossLog = {
+  totalLost: number
+  lastLossDate: string
+  dailyLossToday: number
+  dailyLossDate: string
+  solitarioCount: number
+  lossesThisSession: number
+}

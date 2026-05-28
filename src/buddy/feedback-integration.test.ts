@@ -40,12 +40,22 @@ mock.module('../memdir/paths.js', () => ({
   isAutoMemoryEnabled: () => false,
 }))
 
-// Mock feedbackLog for feedbackHook.ts transitive import (if resolved)
+// Mock feedbackLog
+let mockEvents: any[] = []
+let loggedEvents: any[] = []
+
 mock.module('../memdir/feedbackLog.js', () => ({
-  logFeedbackEvent: () => {},
+  readFeedbackEvents: async () => mockEvents,
+  logFeedbackEvent: async (event: any) => {
+    loggedEvents.push(event)
+  },
+  clearFeedbackLog: async () => {},
+  resetFeedbackLog: async () => {},
+  getFeedbackLogPath: () => '/tmp/feedback-log.jsonl',
 }))
 
 import { fireCompanionObserver, notifyFeedbackConfirm } from './observer.js'
+import { call as feedbackCall } from '../commands/feedback/feedback.js'
 
 function getTodayString(): string {
   const now = new Date()
@@ -54,6 +64,8 @@ function getTodayString(): string {
 
 describe('buddy-feedback integration', () => {
   beforeEach(() => {
+    mockEvents = []
+    loggedEvents = []
     mockConfig = {
       companion: {
         name: 'Pixelbud',
@@ -118,5 +130,93 @@ describe('buddy-feedback integration', () => {
     expect(result).toContain('Pixelbud')
     expect(mockConfig.companion.xp).toBe(12) // 10 + 2
     expect(mockConfig.companionStats.totalFeedbackConfirms).toBe(1)
+  })
+
+  describe('feedback command refinement', () => {
+    const sampleContext = {
+      abortController: new AbortController(),
+      messages: [
+        {
+          type: 'assistant',
+          message: {
+            content: [{ type: 'text', text: 'I am running npm test.' }]
+          }
+        },
+        {
+          type: 'user',
+          message: {
+            content: [{ type: 'text', text: 'use bun test instead' }]
+          }
+        }
+      ]
+    } as any
+
+    it('confirm command falls back to listing recent interactions when no pending events exist', async () => {
+      const result = await feedbackCall('confirm', sampleContext)
+      expect(result.type).toBe('text')
+      expect(result.value).toContain('Nenhum feedback pendente sugerido automaticamente')
+      expect(result.value).toContain('use bun test instead')
+      expect(result.value).toContain('I am running npm test.')
+    })
+
+    it('approve <index> logs confirmed correction and rewards companion', async () => {
+      const result = await feedbackCall('approve 1', sampleContext)
+      expect(result.type).toBe('text')
+      expect(result.value).toContain('Interação [1] aprovada e gravada com sucesso!')
+      expect(result.value).toContain('Pixelbud') // Reaction from Buddy
+
+      // Check logged event
+      expect(loggedEvents.length).toBe(1)
+      expect(loggedEvents[0].type).toBe('correction')
+      expect(loggedEvents[0].original).toBe('I am running npm test.')
+      expect(loggedEvents[0].correction).toBe('use bun test instead')
+      expect(loggedEvents[0].confirmed).toBe(true)
+
+      // Companion earned +2 XP
+      expect(mockConfig.companion.xp).toBe(12)
+      expect(mockConfig.companionStats.totalFeedbackConfirms).toBe(1)
+    })
+
+    it('approve <custom rule> logs custom text rule directly and rewards companion', async () => {
+      const result = await feedbackCall('approve utilize bun para rodar testes', sampleContext)
+      expect(result.type).toBe('text')
+      expect(result.value).toContain('Regra personalizada criada e gravada com sucesso')
+      expect(result.value).toContain('utilize bun para rodar testes')
+      expect(result.value).toContain('Pixelbud')
+
+      // Check logged event
+      expect(loggedEvents.length).toBe(1)
+      expect(loggedEvents[0].type).toBe('correction')
+      expect(loggedEvents[0].correction).toBe('utilize bun para rodar testes')
+      expect(loggedEvents[0].confirmed).toBe(true)
+
+      // Companion earned +2 XP
+      expect(mockConfig.companion.xp).toBe(12)
+    })
+
+    it('reject <index> logs outcome/correction event with success = false', async () => {
+      const result = await feedbackCall('reject 1', sampleContext)
+      expect(result.type).toBe('text')
+      expect(result.value).toContain('marcada como indesejada')
+
+      // Check logged event
+      expect(loggedEvents.length).toBe(1)
+      expect(loggedEvents[0].type).toBe('correction')
+      expect(loggedEvents[0].original).toBe('I am running npm test.')
+      expect(loggedEvents[0].correction).toBe('use bun test instead')
+      expect(loggedEvents[0].success).toBe(false)
+      expect(loggedEvents[0].confirmed).toBe(true)
+
+      // No XP is granted for reject
+      expect(mockConfig.companion.xp).toBe(10)
+    })
+
+    it('help command returns the detailed feedback learning guide', async () => {
+      const result = await feedbackCall('help', sampleContext)
+      expect(result.type).toBe('text')
+      expect(result.value).toContain('SISTEMA DE APRENDIZADO DE FEEDBACK')
+      expect(result.value).toContain('/feedback approve')
+      expect(result.value).toContain('/feedback reject')
+    })
   })
 })

@@ -64,6 +64,10 @@ describe('observer reactions', () => {
         totalTasks: 2,
         totalErrors: 0,
         totalPets: 1,
+        totalReads: 0,
+        totalWrites: 0,
+        totalEdits: 0,
+        totalSearches: 0,
         daysActive: 1,
         totalTokensSaved: 0,
         totalFeedbackRules: 0,
@@ -73,6 +77,14 @@ describe('observer reactions', () => {
       companionStreakCount: 1,
       companionMemory: [],
       companionLastActiveDate: getTodayString(),
+      companionAchievements: [
+        'first-commit', 'maratonista', 'maratonista-1k', 'bug-hunter', 'bug-slayer',
+        'task-master', 'task-legend', 'streak-warrior', 'streak-obsessed', 'pet-lover',
+        'pet-addict', 'evolver', 'konami-master', 'fashionista', 'fashion-king',
+        'legendary', 'easter-hunter', 'night-owl', 'rainbow-warrior', 'premium-user',
+        'code-reviewer', 'stoneage-first', 'stoneage-fire', 'stoneage-mammoth',
+        'stoneage-master', 'feedback-aprendiz', 'feedback-mestre', 'feedback-sabio'
+      ],
     }
   })
 
@@ -127,7 +139,7 @@ describe('observer reactions', () => {
 
   // ─── Bash Success ────────────────────────────────────────────────────
   describe('bash success', () => {
-    it('grants +0.1 XP on successful bash', async () => {
+    it('grants +0.01 XP on successful bash', async () => {
       const xpBefore = mockConfig.companion.xp
       const messages = [
         {
@@ -140,7 +152,7 @@ describe('observer reactions', () => {
 
       await fireCompanionObserver(messages, () => {})
 
-      expect(mockConfig.companion.xp).toBeCloseTo(xpBefore + 0.1, 1)
+      expect(mockConfig.companion.xp).toBeCloseTo(xpBefore + 0.01, 2)
       expect(mockConfig.companionStats.totalBashes).toBe(6) // 5 + 1
     })
 
@@ -201,6 +213,227 @@ describe('observer reactions', () => {
 
       expect(reactions.length).toBeGreaterThan(0)
       expect(mockConfig.companionStats.totalErrors).toBe(1)
+    })
+
+    it('detects bash failure with real BashTool output format (Exit code 1)', async () => {
+      const reactions: string[] = []
+      const messages = [
+        {
+          type: 'tool_result',
+          name: 'Bash',
+          content: 'Exit code 1',
+          is_error: false,
+        },
+      ] as any[]
+
+      await fireCompanionObserver(messages, (r) => { if (r) reactions.push(r) })
+
+      expect(reactions.length).toBeGreaterThan(0)
+      expect(reactions[0]).toContain('Echobud')
+      expect(mockConfig.companionStats.totalErrors).toBe(1)
+    })
+  })
+
+  // ─── Multiple Events in One Turn (Priority System) ─────────────────
+  describe('multiple events in one turn', () => {
+    it('accumulates error + bash stats but emits single reaction', async () => {
+      const reactions: string[] = []
+      const messages = [
+        {
+          type: 'tool_result',
+          name: 'Bash',
+          content: 'success output',
+          is_error: false,
+        },
+        {
+          type: 'tool_result',
+          name: 'Bash',
+          content: 'Exit code 1',
+          is_error: false,
+        },
+      ] as any[]
+
+      const initialBashes = mockConfig.companionStats.totalBashes
+      const initialErrors = mockConfig.companionStats.totalErrors
+
+      await fireCompanionObserver(messages, (r) => { if (r) reactions.push(r) })
+
+      // Both stats should be accumulated
+      expect(mockConfig.companionStats.totalErrors).toBe(initialErrors + 1)
+      expect(mockConfig.companionStats.totalBashes).toBe(initialBashes + 1)
+      // But only one reaction (error has higher priority than bash success)
+      expect(reactions.length).toBe(1)
+    })
+
+    it('accumulates task + error + bash stats and emits highest priority reaction', async () => {
+      const reactions: string[] = []
+      const messages = [
+        {
+          type: 'tool_result',
+          name: 'Bash',
+          content: 'Exit code 1',
+          is_error: false,
+        },
+        {
+          type: 'tool_result',
+          name: 'Bash',
+          content: 'ok',
+          is_error: false,
+        },
+        {
+          type: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              name: 'TaskUpdate',
+              input: { status: 'completed' },
+            },
+          ],
+        },
+      ] as any[]
+
+      const initialTasks = mockConfig.companionStats.totalTasks
+      const initialErrors = mockConfig.companionStats.totalErrors
+      const initialBashes = mockConfig.companionStats.totalBashes
+
+      await fireCompanionObserver(messages, (r) => { if (r) reactions.push(r) })
+
+      // All stats should be accumulated
+      expect(mockConfig.companionStats.totalTasks).toBe(initialTasks + 1)
+      expect(mockConfig.companionStats.totalErrors).toBe(initialErrors + 1)
+      expect(mockConfig.companionStats.totalBashes).toBe(initialBashes + 1)
+      // Only one reaction (task completion has highest priority)
+      expect(reactions.length).toBe(1)
+      expect(reactions[0]).toContain('Echobud')
+    })
+  })
+
+  // ─── Tool Category Tracking ─────────────────────────────────────────
+  describe('tool category tracking', () => {
+    it('increments totalReads and XP for Read tool', async () => {
+      const reactions: string[] = []
+      const messages = [
+        {
+          type: 'tool_result',
+          name: 'Read',
+          content: 'file contents here',
+          is_error: false,
+        },
+      ] as any[]
+
+      const initialReads = mockConfig.companionStats.totalReads
+      const initialXp = mockConfig.companion!.xp
+
+      await fireCompanionObserver(messages, (r) => { if (r) reactions.push(r) })
+
+      expect(mockConfig.companionStats.totalReads).toBe(initialReads + 1)
+      expect(mockConfig.companion!.xp).toBeGreaterThan(initialXp)
+    })
+
+    it('increments totalWrites and XP for Write tool', async () => {
+      const reactions: string[] = []
+      const messages = [
+        {
+          type: 'tool_result',
+          name: 'Write',
+          content: 'file written successfully',
+          is_error: false,
+        },
+      ] as any[]
+
+      const initialWrites = mockConfig.companionStats.totalWrites
+
+      await fireCompanionObserver(messages, (r) => { if (r) reactions.push(r) })
+
+      expect(mockConfig.companionStats.totalWrites).toBe(initialWrites + 1)
+    })
+
+    it('increments totalEdits and XP for Edit tool', async () => {
+      const reactions: string[] = []
+      const messages = [
+        {
+          type: 'tool_result',
+          name: 'Edit',
+          content: 'file edited successfully',
+          is_error: false,
+        },
+      ] as any[]
+
+      const initialEdits = mockConfig.companionStats.totalEdits
+
+      await fireCompanionObserver(messages, (r) => { if (r) reactions.push(r) })
+
+      expect(mockConfig.companionStats.totalEdits).toBe(initialEdits + 1)
+    })
+
+    it('increments totalSearches and XP for Grep tool', async () => {
+      const reactions: string[] = []
+      const messages = [
+        {
+          type: 'tool_result',
+          name: 'Grep',
+          content: 'search results',
+          is_error: false,
+        },
+      ] as any[]
+
+      const initialSearches = mockConfig.companionStats.totalSearches
+
+      await fireCompanionObserver(messages, (r) => { if (r) reactions.push(r) })
+
+      expect(mockConfig.companionStats.totalSearches).toBe(initialSearches + 1)
+    })
+
+    it('increments totalSearches for Glob tool', async () => {
+      const reactions: string[] = []
+      const messages = [
+        {
+          type: 'tool_result',
+          name: 'Glob',
+          content: 'matched files list',
+          is_error: false,
+        },
+      ] as any[]
+
+      const initialSearches = mockConfig.companionStats.totalSearches
+
+      await fireCompanionObserver(messages, (r) => { if (r) reactions.push(r) })
+
+      expect(mockConfig.companionStats.totalSearches).toBe(initialSearches + 1)
+    })
+
+    it('tracks multiple different tool categories in one turn', async () => {
+      const reactions: string[] = []
+      const messages = [
+        {
+          type: 'tool_result',
+          name: 'Read',
+          content: 'file contents',
+          is_error: false,
+        },
+        {
+          type: 'tool_result',
+          name: 'Grep',
+          content: 'search results',
+          is_error: false,
+        },
+        {
+          type: 'tool_result',
+          name: 'Edit',
+          content: 'edited',
+          is_error: false,
+        },
+      ] as any[]
+
+      const initialReads = mockConfig.companionStats.totalReads
+      const initialSearches = mockConfig.companionStats.totalSearches
+      const initialEdits = mockConfig.companionStats.totalEdits
+
+      await fireCompanionObserver(messages, (r) => { if (r) reactions.push(r) })
+
+      expect(mockConfig.companionStats.totalReads).toBe(initialReads + 1)
+      expect(mockConfig.companionStats.totalSearches).toBe(initialSearches + 1)
+      expect(mockConfig.companionStats.totalEdits).toBe(initialEdits + 1)
     })
   })
 
@@ -394,6 +627,39 @@ describe('observer reactions', () => {
       await fireCompanionObserver(messages, (r) => { if (r) reactions.push(r) })
 
       expect(reactions.length).toBe(0)
+    })
+  })
+
+  // ─── Session Time Tracking ───────────────────────────────────────────
+  describe('session time tracking', () => {
+    it('initializes companionLastSessionTick if not present', async () => {
+      delete mockConfig.companionLastSessionTick
+      await fireCompanionObserver([], () => {})
+      expect(mockConfig.companionLastSessionTick).toBeDefined()
+    })
+
+    it('accumulates elapsed minutes since last tick and updates tick', async () => {
+      const now = Date.now()
+      // Let's set the last tick to 5 minutes ago
+      mockConfig.companionLastSessionTick = now - 5 * 60000
+      mockConfig.companionStats.totalSessionMinutes = 10
+
+      await fireCompanionObserver([], () => {})
+
+      expect(mockConfig.companionStats.totalSessionMinutes).toBe(15)
+      expect(mockConfig.companionLastSessionTick).toBeGreaterThanOrEqual(now)
+    })
+
+    it('caps the elapsed minutes to MAX_SESSION_GAP_MINUTES (30 min)', async () => {
+      const now = Date.now()
+      // Set last tick to 45 minutes ago
+      mockConfig.companionLastSessionTick = now - 45 * 60000
+      mockConfig.companionStats.totalSessionMinutes = 10
+
+      await fireCompanionObserver([], () => {})
+
+      expect(mockConfig.companionStats.totalSessionMinutes).toBe(40) // 10 + 30
+      expect(mockConfig.companionLastSessionTick).toBeGreaterThanOrEqual(now)
     })
   })
 })

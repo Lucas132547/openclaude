@@ -27,6 +27,7 @@ import { stripBOM } from './jsonRead.js'
 import * as lockfile from './lockfile.js'
 import { logError } from './log.js'
 import type { MemoryType } from './memory/types.js'
+import type { CompanionShop } from '../buddy/types.js'
 import { normalizePathForConfigKey } from './path.js'
 import { getEssentialTrafficOnlyReason } from './privacyLevel.js'
 import { getManagedFilePath } from './settings/managedPath.js'
@@ -314,16 +315,32 @@ export type GlobalConfig = {
     totalTasks: number
     totalErrors: number
     totalPets: number
+    totalReads: number
+    totalWrites: number
+    totalEdits: number
+    totalSearches: number
     daysActive: number
     totalTokensSaved: number
     totalFeedbackRules: number
     totalFeedbackConfirms: number
+    totalSessionMinutes: number
   }
+  companionLastSessionTick?: number
   companionLastAction?: Record<string, number>
   companionReminders?: Array<{ text: string; at: number; createdAt: number }>
   companionMemory?: Array<{ text: string; timestamp: number; trigger: string }>
   companionOutfits?: string[]
   companionActiveOutfit?: string
+  companionAchievements?: string[]
+  companionShop?: CompanionShop
+  companionXpLossLog?: {
+    totalLost: number
+    lastLossDate: string
+    dailyLossToday: number
+    dailyLossDate: string
+    solitarioCount: number
+    lossesThisSession: number
+  }
 
   // Feedback survey tracking
   feedbackSurveyState?: {

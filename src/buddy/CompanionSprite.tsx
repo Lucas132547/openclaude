@@ -12,7 +12,8 @@ import type { Theme } from '../utils/theme.js';
 import { getCompanion } from './companion.js';
 import { isBuddyEnabled } from './feature.js';
 import { getActiveOutfit } from './outfits.js';
-import { getOutfitStyle, renderFace, renderSprite, spriteFrameCount } from './sprites.js';
+import { getOutfitStyle, renderFace, renderSprite, spriteFrameCount, getAccessoryStyles, mergeAccessoryStyles, getThemeStyle } from './sprites.js';
+import { getShop } from './shop.js';
 import { RARITY_COLORS } from './types.js';
 const TICK_MS = 500;
 const BUBBLE_SHOW = 40; // ticks → ~20s at 500ms
@@ -283,7 +284,7 @@ export function CompanionSprite(): React.ReactNode {
     spriteFrame = tick % frameCount;
   } else {
     const blinkMul = outfitStyle?.blinkSpeed ?? 1
-    const step = IDLE_SEQUENCE[(tick * blinkMul) % IDLE_SEQUENCE.length]!;
+    const step = IDLE_SEQUENCE[Math.floor(tick * blinkMul) % IDLE_SEQUENCE.length]!;
     if (step === -1) {
       spriteFrame = 0;
       blink = true;
@@ -293,25 +294,61 @@ export function CompanionSprite(): React.ReactNode {
   }
   // Outfit effects: custom eye, extra lines, dim
   const outfitEye = outfitStyle?.eye
-  const effectiveCompanion = outfitEye ? { ...companion, eye: outfitEye as any } : companion
+  // Accessory effects
+  const shop = getShop()
+  const accessoryStyles = getAccessoryStyles(shop.equippedAccessories)
+  const accMerged = mergeAccessoryStyles(accessoryStyles)
+  // Theme effects
+  const themeStyle = getThemeStyle(shop.equippedTheme)
+  // Title display
+  const equippedTitle = shop.equippedTitle
+  const titleItem = equippedTitle ? (() => {
+    const t = { 'titulo-comum': 'Code Apprentice', 'titulo-raro': 'Bug Destroyer', 'titulo-epico': 'Architect of Dreams' }[equippedTitle]
+    return t || (shop.customTitle || null)
+  })() : null
+  // Accessories can override eye too (monoculo has leftEye/rightEye)
+  const accEye = accMerged.eye
+  const finalEye = accEye ?? outfitEye
+  const effectiveCompanion = finalEye ? { ...companion, eye: finalEye as any } : companion
   // During evolution blink, render empty lines
   const body = (evolveBlink
     ? renderSprite(effectiveCompanion, spriteFrame).map(() => ' '.repeat(24))
     : renderSprite(effectiveCompanion, spriteFrame)
-  ).map(line => {
-    const blinked = blink ? line.replaceAll(effectiveCompanion.eye, '-') : line;
-    if (outfitStyle?.symbol && blinked.trim()) {
-      return `${outfitStyle.symbol}${blinked}${outfitStyle.symbol}`;
+  ).map((line) => {
+    let result = blink ? line.replaceAll(effectiveCompanion.eye, '-') : line;
+    // Outfit symbol
+    if (outfitStyle?.symbol && result.trim()) {
+      result = `${outfitStyle.symbol}${result}${outfitStyle.symbol}`;
     }
-    return blinked;
+    // Accessory eye replacements (monoculo: leftEye only, oculos: both)
+    if (accMerged.leftEye || accMerged.rightEye) {
+      const eyeChar = blink ? '-' : effectiveCompanion.eye
+      const idx = result.indexOf(eyeChar)
+      if (idx !== -1) {
+        const replacement = accMerged.leftEye ?? eyeChar
+        result = result.substring(0, idx) + replacement + result.substring(idx + eyeChar.length)
+      }
+      if (accMerged.rightEye) {
+        const secondIdx = result.indexOf(eyeChar, idx + 1)
+        if (secondIdx !== -1) {
+          result = result.substring(0, secondIdx) + accMerged.rightEye + result.substring(secondIdx + eyeChar.length)
+        }
+      }
+    }
+    return result
   });
   // Add outfit extra lines
-  const extraTop = outfitStyle?.extraTop ?? []
-  const extraBottom = outfitStyle?.extraBottom ?? []
+  const outfitExtraTop = outfitStyle?.extraTop ?? []
+  const outfitExtraBottom = outfitStyle?.extraBottom ?? []
+  // Merge all extra lines: theme + accessories + outfit
+  const themeExtraTop = themeStyle?.extraTop ?? []
+  const themeExtraBottom = themeStyle?.extraBottom ?? []
+  const allExtraTop = [...themeExtraTop, ...accMerged.extraTop, ...outfitExtraTop]
+  const allExtraBottom = [...outfitExtraBottom, ...accMerged.extraBottom, ...themeExtraBottom]
   const sprite = [
-    ...extraTop,
+    ...allExtraTop,
     ...(heartFrame ? [heartFrame, ...body] : body),
-    ...extraBottom,
+    ...allExtraBottom,
   ]
 
   // Name row doubles as hint row — unfocused shows dim name + ↓ discovery,
@@ -320,13 +357,15 @@ export function CompanionSprite(): React.ReactNode {
   // sprite doesn't jump up when selected. flexShrink=0 stops the
   // inline-bubble row wrapper from squeezing the sprite to fit.
   const isDim = outfitStyle?.dim ?? false
+  const spriteColor = themeStyle?.color ?? color
   const spriteColumn = <Box flexDirection="column" flexShrink={0} alignItems="center" width={colWidth}>
-      {sprite.map((line, i) => <Text key={i} color={i === 0 && heartFrame ? 'autoAccept' : color} dimColor={isDim}>
+      {sprite.map((line, i) => <Text key={i} color={i === 0 && heartFrame ? 'autoAccept' : spriteColor} dimColor={isDim}>
           {line}
         </Text>)}
-      <Text italic bold={focused} dimColor={!focused} color={focused ? color : undefined} inverse={focused}>
+      <Text italic bold={focused} dimColor={!focused} color={focused ? spriteColor : undefined} inverse={focused}>
         {focused ? ` ${companion.name} ` : companion.name}
       </Text>
+      {titleItem && <Text italic dimColor color="gray" fontSize={1}>{titleItem}</Text>}
     </Box>;
   if (!reaction) {
     return <Box paddingX={1}>{spriteColumn}</Box>;

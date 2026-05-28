@@ -10,7 +10,7 @@ mock.module('../utils/config.js', () => ({
   },
 }))
 
-import { equipHat, getHatRequirements } from './outfits.js'
+import { equipHat, getHatRequirements, checkAndUnlockOutfits } from './outfits.js'
 
 describe('equipHat', () => {
   beforeEach(() => {
@@ -142,5 +142,40 @@ describe('getHatRequirements', () => {
     // so it still works — we mainly test that it returns data
     const reqs = getHatRequirements()
     expect(reqs.length).toBe(12)
+  })
+})
+
+describe('checkAndUnlockOutfits', () => {
+  beforeEach(() => {
+    mockConfig = {
+      companion: {
+        species: 'duck',
+        name: 'Test',
+        hat: 'none',
+        xp: 0,
+        hatchedAt: Date.now(),
+      },
+      companionStats: {
+        totalBashes: 0,
+        totalTasks: 0,
+        totalErrors: 0,
+        totalSessionMinutes: 0,
+      },
+      companionOutfits: [],
+    }
+  })
+
+  test('unlocks Pixel Art when totalSessionMinutes >= 6000', () => {
+    mockConfig.companionStats.totalSessionMinutes = 6000
+    const newlyUnlocked = checkAndUnlockOutfits()
+    expect(newlyUnlocked).toContain('Pixel Art')
+    expect(mockConfig.companionOutfits).toContain('pixel-art')
+  })
+
+  test('does not unlock Pixel Art when totalSessionMinutes < 6000', () => {
+    mockConfig.companionStats.totalSessionMinutes = 5999
+    const newlyUnlocked = checkAndUnlockOutfits()
+    expect(newlyUnlocked).not.toContain('Pixel Art')
+    expect(mockConfig.companionOutfits).not.toContain('pixel-art')
   })
 })
