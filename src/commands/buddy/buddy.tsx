@@ -1427,6 +1427,27 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
     return null;
   }
 
+  // Force observer validation for pure '/buddy' (pet) to complete itself immediately
+  saveGlobalConfig(current => {
+    const todayStr = getTodayString()
+    let questData = current.companionQuests
+    if (questData?.date !== todayStr) questData = { date: todayStr, completed: {} }
+
+    const q = getTodayQuests().find(q => q.id === 'buddy_pet')
+    if (q && !questData.completed[q.id]) {
+      questData.completed[q.id] = true
+      return {
+        ...current,
+        companionQuests: questData,
+        companion: current.companion ? {
+          ...current.companion,
+          xp: Math.round(((current.companion.xp ?? 0) + q.xpReward) * 10) / 10
+        } : undefined
+      }
+    }
+    return current
+  })
+
   // Increment pet count
   saveGlobalConfig((current) => ({
     ...current,
