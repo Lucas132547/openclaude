@@ -306,7 +306,7 @@ export function CompanionSprite(): React.ReactNode {
   const body = (evolveBlink
     ? renderSprite(effectiveCompanion, spriteFrame).map(() => ' '.repeat(24))
     : renderSprite(effectiveCompanion, spriteFrame)
-  ).map((line, lineIdx) => {
+  ).map((line) => {
     let result = blink ? line.replaceAll(effectiveCompanion.eye, '-') : line;
     // Outfit symbol
     if (outfitStyle?.symbol && result.trim()) {
