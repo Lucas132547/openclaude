@@ -11,6 +11,7 @@ import { checkKonamiCode, checkAnswer42 } from './easter-eggs.js'
 import { addMemory } from './memory.js'
 import { checkAndGrantAchievementXp } from './achievements.js'
 import { tryLoseXp, checkBuddySolitario, getXpMultiplier } from './xp-loss.js'
+import { getEmoteReaction } from './shop.js'
 
 const DIRECT_REPLIES = [
   'Estou observando.',
