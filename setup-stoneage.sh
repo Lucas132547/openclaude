@@ -1,41 +1,67 @@
 #!/bin/bash
-# Setup stoneage plugin for OpenClaude
+# Setup stoneage skills for OpenClaude
 # Run from openclaude/ directory: ./setup-stoneage.sh
+#
+# Skills go to TWO places:
+#   .claude/skills/   — project-local (this repo only)
+#   ~/.openclaude/skills/ — global (all projects)
+#
+# IMPORTANT: skills must be FLAT (.claude/skills/X/SKILL.md), never nested
+# inside a category folder — that creates namespace prefix that breaks /slash commands.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PLUGIN_DIR="$SCRIPT_DIR/plugins/stoneage"
-SKILLS_SRC="$PLUGIN_DIR/skills"
-SKILLS_DST="$SCRIPT_DIR/.claude/skills/stoneage"
+SKILLS_SRC="$SCRIPT_DIR/plugins/stoneage/skills"
+SKILLS_PROJECT="$SCRIPT_DIR/.claude/skills"
+SKILLS_GLOBAL="$HOME/.openclaude/skills"
 
-if [ ! -d "$PLUGIN_DIR" ]; then
-  echo "Erro: $PLUGIN_DIR nao existe"
+if [ ! -d "$SKILLS_SRC" ]; then
+  echo "Erro: $SKILLS_SRC nao existe"
   exit 1
 fi
 
-# 1. Copy skills to .claude/skills/stoneage/ (needed because .gitignore blocks .claude/)
-mkdir -p "$SKILLS_DST"
+echo "=== Stoneage Skills Setup ==="
+echo ""
+
+# 1. Copy skills to project-local (.claude/skills/) — flat, no nesting
+mkdir -p "$SKILLS_PROJECT"
 for skill in "$SKILLS_SRC"/*/; do
   name=$(basename "$skill")
-  cp -r "$skill" "$SKILLS_DST/$name"
-  echo "  + $name"
+  target="$SKILLS_PROJECT/$name"
+  if [ -d "$target" ]; then
+    rm -rf "$target"
+  fi
+  cp -r "$skill" "$target"
+  echo "  [project] $name"
 done
 
-# 2. Update project settings
-SETTINGS="$SCRIPT_DIR/.openclaude/settings.json"
-if [ -f "$SETTINGS" ]; then
-  node -e "
-const fs = require('fs');
-const s = JSON.parse(fs.readFileSync('$SETTINGS', 'utf8'));
-if (!s.extraKnownMarketplaces) s.extraKnownMarketplaces = {};
-s.extraKnownMarketplaces.stoneage = {
-  source: { source: 'directory', path: '$PLUGIN_DIR' }
-};
-if (!s.enabledPlugins) s.enabledPlugins = {};
-s.enabledPlugins['stoneage@stoneage'] = true;
-fs.writeFileSync('$SETTINGS', JSON.stringify(s, null, 2) + '\n');
-"
-  echo "  Settings atualizado"
+# 2. Copy skills to global (~/.openclaude/skills/) — available in all projects
+mkdir -p "$SKILLS_GLOBAL"
+for skill in "$SKILLS_SRC"/*/; do
+  name=$(basename "$skill")
+  target="$SKILLS_GLOBAL/$name"
+  # Skip if it's a symlink (managed externally)
+  if [ -L "$target" ]; then
+    echo "  [global] $name (symlink, skipped)"
+    continue
+  fi
+  if [ -d "$target" ]; then
+    rm -rf "$target"
+  fi
+  cp -r "$skill" "$target"
+  echo "  [global] $name"
+done
+
+# 3. Remove stale nested structure if it exists
+if [ -d "$SKILLS_PROJECT/stoneage" ] && [ -f "$SKILLS_PROJECT/stoneage/SKILL.md" ]; then
+  # Check if it's the old nested category dir (has subdirs inside)
+  has_children=$(find "$SKILLS_PROJECT/stoneage" -mindepth 1 -maxdepth 1 -type d | head -1)
+  if [ -n "$has_children" ]; then
+    echo ""
+    echo "  AVISO: Estrutura antiga detectada em .claude/skills/stoneage/"
+    echo "  Skills flat ja copiadas. Remova .claude/skills/stoneage/ manualmente se quiser."
+  fi
 fi
 
 echo ""
-echo "Stoneage configurado! Reinicie as sessoes do OpenClaude."
+echo "Pronto! Reinicie sessoes do OpenClaude."
+echo "Skills disponiveis via /stoneage, /token-economy, /answer-first, etc."

@@ -4,6 +4,7 @@ import {
   clearFeedbackLog,
   resetFeedbackLog,
   getFeedbackLogPath,
+  logFeedbackEvent,
   FeedbackEvent,
 } from '../../memdir/feedbackLog.js'
 import { scanMemoryFiles } from '../../memdir/memoryScan.js'
@@ -13,6 +14,7 @@ import { parseFrontmatter } from '../../utils/frontmatterParser.js'
 import type { LocalCommandCall, LocalCommandResult } from '../../types/command.js'
 import { notifyFeedbackConfirm } from '../../buddy/observer.js'
 import { getCompanion } from '../../buddy/companion.js'
+import { getAssistantMessageText, getUserMessageText } from '../../utils/messages.js'
 import chalk from 'chalk'
 
 function stringifyFrontmatter(frontmatter: Record<string, any>): string {
@@ -23,6 +25,84 @@ function stringifyFrontmatter(frontmatter: Record<string, any>): string {
     }
   }
   lines.push('---')
+  return lines.join('\n')
+}
+
+interface InteractionPair {
+  userMessage: any
+  assistantMessage: any
+  userText: string
+  assistantText: string
+}
+
+function getRecentInteractionPairs(messages: any[]): InteractionPair[] {
+  const pairs: InteractionPair[] = []
+  const seenUserIds = new Set<string>()
+
+  // Walk backwards through messages
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i]
+    if (!msg || msg.type !== 'user') continue
+
+    const userText = getUserMessageText(msg)?.trim()
+    if (!userText) continue
+
+    // Ignore commands starting with '/' or internal XML-like system block strings starting with '<'
+    if (userText.startsWith('/') || userText.startsWith('<')) continue
+
+    const msgId = msg.id ?? String(i)
+    if (seenUserIds.has(msgId)) continue
+    seenUserIds.add(msgId)
+
+    // Find the preceding assistant message
+    let precedingAssistant: any = null
+    let assistantText = ''
+    for (let j = i - 1; j >= 0; j--) {
+      const prevMsg = messages[j]
+      if (prevMsg && prevMsg.type === 'assistant') {
+        const text = getAssistantMessageText(prevMsg)?.trim()
+        if (text) {
+          precedingAssistant = prevMsg
+          assistantText = text
+          break
+        }
+      }
+    }
+
+    pairs.push({
+      userMessage: msg,
+      assistantMessage: precedingAssistant,
+      userText,
+      assistantText: assistantText || '(Nenhuma resposta anterior)'
+    })
+
+    if (pairs.length >= 5) {
+      break
+    }
+  }
+
+  return pairs
+}
+
+function formatInteractionList(pairs: InteractionPair[]): string {
+  const lines = [
+    chalk.bold('Interações Multiturnos Recentes Encontradas:'),
+    chalk.gray('Use "/feedback approve <número>" para confirmar ou "/feedback reject <número>" para sinalizar comportamento indesejado.'),
+    ''
+  ]
+
+  pairs.forEach((pair, idx) => {
+    const num = idx + 1
+    const cleanUser = pair.userText.length > 80 ? pair.userText.substring(0, 77) + '...' : pair.userText
+    const cleanAssistant = pair.assistantText.length > 80 ? pair.assistantText.substring(0, 77) + '...' : pair.assistantText
+
+    lines.push(
+      `  ${chalk.cyan(`[${num}]`)} ${chalk.bold('Correção (User):')} "${chalk.yellow(cleanUser)}"`,
+      `      ${chalk.bold('Original (IA):')}    "${chalk.gray(cleanAssistant)}"`,
+      ''
+    )
+  })
+
   return lines.join('\n')
 }
 
@@ -38,9 +118,17 @@ export const call: LocalCommandCall = async (args, context): Promise<LocalComman
       const lastIndex = [...events].reverse().findIndex(e => !e.confirmed && (e.type === 'undo' || e.type === 'correction'))
       
       if (lastIndex === -1) {
+        const pairs = getRecentInteractionPairs(context.messages || [])
+        if (pairs.length === 0) {
+          return {
+            type: 'text',
+            value: chalk.yellow('[Feedback System] Nenhum evento pendente para confirmação no log, e nenhuma interação recente encontrada no histórico.'),
+          }
+        }
         return {
           type: 'text',
-          value: chalk.yellow('[Feedback System] Nenhum evento pendente para confirmação no log de sessões.'),
+          value: chalk.yellow('[Feedback System] Nenhum feedback pendente sugerido automaticamente. Mas você pode aprovar interações recentes:\n\n') +
+            formatInteractionList(pairs),
         }
       }
 
@@ -65,6 +153,126 @@ export const call: LocalCommandCall = async (args, context): Promise<LocalComman
         type: 'text',
         value: chalk.green('[Feedback System] Padrão de feedback confirmado e salvo com sucesso! O sintetizador dará prioridade extra a esta regra na próxima consolidação.') +
           (buddyReaction ? `\n\n${buddyReaction}` : ''),
+      }
+    }
+
+    case 'approve': {
+      const subArgsTrimmed = subArgs.trim()
+      
+      // If no arguments, show recent interactions
+      if (!subArgsTrimmed) {
+        const pairs = getRecentInteractionPairs(context.messages || [])
+        if (pairs.length === 0) {
+          return {
+            type: 'text',
+            value: chalk.yellow('[Feedback System] Nenhuma interação recente encontrada no histórico. Você também pode digitar um texto direto para criar uma regra personalizada.'),
+          }
+        }
+        return {
+          type: 'text',
+          value: formatInteractionList(pairs),
+        }
+      }
+
+      // Check if it's a number between 1 and 5
+      const num = parseInt(subArgsTrimmed, 10)
+      if (!isNaN(num) && num >= 1 && num <= 5) {
+        const pairs = getRecentInteractionPairs(context.messages || [])
+        if (num > pairs.length) {
+          return {
+            type: 'text',
+            value: chalk.red(`[Feedback System] Índice inválido. Existem apenas ${pairs.length} interações recentes disponíveis.`),
+          }
+        }
+
+        const pair = pairs[num - 1]!
+        // Save as confirmed correction
+        await logFeedbackEvent({
+          type: 'correction',
+          original: pair.assistantText,
+          correction: pair.userText,
+          confirmed: true
+        })
+
+        // Notify buddy and grant XP
+        const companion = getCompanion()
+        const buddyName = companion?.name ?? 'Buddy'
+        const buddyReaction = notifyFeedbackConfirm(buddyName)
+
+        return {
+          type: 'text',
+          value: chalk.green(`[Feedback System] Interação [${num}] aprovada e gravada com sucesso! O sintetizador consolidará esse aprendizado.`) +
+            (buddyReaction ? `\n\n${buddyReaction}` : ''),
+        }
+      }
+
+      // Otherwise, it's a custom text rule!
+      await logFeedbackEvent({
+        type: 'correction',
+        correction: subArgsTrimmed,
+        confirmed: true
+      })
+
+      // Notify buddy and grant XP
+      const companion = getCompanion()
+      const buddyName = companion?.name ?? 'Buddy'
+      const buddyReaction = notifyFeedbackConfirm(buddyName)
+
+      return {
+        type: 'text',
+        value: chalk.green(`[Feedback System] Regra personalizada criada e gravada com sucesso: "${subArgsTrimmed}"`) +
+          (buddyReaction ? `\n\n${buddyReaction}` : ''),
+      }
+    }
+
+    case 'reject': {
+      const subArgsTrimmed = subArgs.trim()
+      
+      // If no arguments, show recent interactions
+      if (!subArgsTrimmed) {
+        const pairs = getRecentInteractionPairs(context.messages || [])
+        if (pairs.length === 0) {
+          return {
+            type: 'text',
+            value: chalk.yellow('[Feedback System] Nenhuma interação recente encontrada no histórico para rejeitar.'),
+          }
+        }
+        return {
+          type: 'text',
+          value: formatInteractionList(pairs),
+        }
+      }
+
+      // Check if it's a number
+      const num = parseInt(subArgsTrimmed, 10)
+      if (!isNaN(num) && num >= 1 && num <= 5) {
+        const pairs = getRecentInteractionPairs(context.messages || [])
+        if (num > pairs.length) {
+          return {
+            type: 'text',
+            value: chalk.red(`[Feedback System] Índice inválido. Existem apenas ${pairs.length} interações recentes disponíveis.`),
+          }
+        }
+
+        const pair = pairs[num - 1]!
+        // Save as correction with success = false and confirmed = true
+        await logFeedbackEvent({
+          type: 'correction',
+          original: pair.assistantText,
+          correction: pair.userText,
+          success: false,
+          confirmed: true
+        })
+
+        return {
+          type: 'text',
+          value: chalk.yellow(`[Feedback System] Interação [${num}] marcada como indesejada (sucesso = falso). O sintetizador usará isso para evitar tais padrões no futuro.`),
+        }
+      }
+
+      return {
+        type: 'text',
+        value: chalk.red('[Feedback System] O comando "/feedback reject" requer um número de 1 a 5 correspondente a uma interação do histórico.'),
       }
     }
 
@@ -202,18 +410,60 @@ export const call: LocalCommandCall = async (args, context): Promise<LocalComman
       }
     }
 
+    case 'help':
     default: {
       const helpText = [
-        chalk.bold('Feedback Learning System — Comandos Disponíveis:'),
+        chalk.bold.cyan('========================================================================'),
+        chalk.bold.cyan('             SISTEMA DE APRENDIZADO DE FEEDBACK (OPENCLAUDE)             '),
+        chalk.bold.cyan('========================================================================'),
+        'O OpenClaude aprende com suas correções para se adaptar ao seu projeto.',
+        'Sempre que você corrige ou desfaz uma alteração, um evento é registrado.',
+        'Este comando permite gerenciar, aprovar e consolidar essas regras.',
         '',
-        `  ${chalk.cyan('/feedback')}                      Exibe esta ajuda.`,
-        `  ${chalk.cyan('/feedback confirm')}              Confirma o último padrão de correção/undo detectado.`,
-        `  ${chalk.cyan('/feedback list')}                 Lista as memórias de feedback aprendidas com seus scores.`,
-        `  ${chalk.cyan('/feedback review')}               Lista as memórias que ficaram fracas/obsoletas (score < 20).`,
-        `  ${chalk.cyan('/feedback ignore <tema>')}        Marca um tema de feedback como ignorado para não ser carregado.`,
-        `  ${chalk.cyan('/feedback synthesize')}           Executa a consolidação inteligente de logs brutos em memórias.`,
-        `  ${chalk.cyan('/feedback clear')}                Limpa os logs de eventos brutos acumulados nesta sessão.`,
-        `  ${chalk.cyan('/feedback reset')}                Remove permanentemente todas as memórias e logs de feedback.`,
+        chalk.bold('Comandos Disponíveis:'),
+        '',
+        `  ${chalk.cyan('/feedback confirm')}`,
+        `    Confirma o último padrão de correção detectado automaticamente pela IA.`,
+        `    Se não houver nenhum padrão detectado, ele lista as interações multiturnos`,
+        `    recentes do histórico para que você possa aprovar ou rejeitar manualmente.`,
+        `    ${chalk.green('Bônus:')} Concede ${chalk.bold('+2 XP')} ao seu companion Buddy.`,
+        '',
+        `  ${chalk.cyan('/feedback approve <número | regra_personalizada>')}`,
+        `    Aprova e confirma uma instrução de aprendizado:`,
+        `      - Se usado com um número de ${chalk.yellow('1')} a ${chalk.yellow('5')} (ex: ${chalk.cyan('/feedback approve 2')}), aprova o`,
+        `        turno correspondente do histórico recente de mensagens.`,
+        `      - Se usado com qualquer outro texto, cria uma regra personalizada direta.`,
+        `    ${chalk.green('Bônus:')} Concede ${chalk.bold('+2 XP')} ao seu companion Buddy.`,
+        '',
+        `  ${chalk.cyan('/feedback reject <número>')}`,
+        `    Rejeita a resposta dada pela IA em um turno específico do histórico.`,
+        `    Sinaliza que o comportamento gerado foi indesejado (${chalk.red('success = false')}).`,
+        `    Isso ensina o sintetizador a evitar repetir esse tipo de resposta.`,
+        '',
+        `  ${chalk.cyan('/feedback list')}`,
+        `    Exibe uma tabela contendo todas as memórias de feedback consolidadas no`,
+        `    projeto com seus respectivos scores de confiança, quantidade de confirmações`,
+        `    e status (ex: Ativa, Crítica, Ignorada).`,
+        '',
+        `  ${chalk.cyan('/feedback synthesize')}`,
+        `    Executa a consolidação inteligente (via IA) dos eventos brutos salvos nos logs`,
+        `    e os organiza em arquivos markdown estruturados contendo regras acionáveis.`,
+        '',
+        `  ${chalk.cyan('/feedback review')}`,
+        `    Varre e lista memórias de feedback obsoletas ou muito fracas (score < 20),`,
+        `    sugerindo temas que podem ser limpos ou redefinidos.`,
+        '',
+        `  ${chalk.cyan('/feedback ignore <tema>')}`,
+        `    Desativa temporariamente um tema de feedback específico (ex: "feedback-auth-patterns")`,
+        `    adicionando a tag "ignored: true" para que ele não influencie mais a sessão.`,
+        '',
+        `  ${chalk.cyan('/feedback clear')}`,
+        `    Limpa os logs de eventos brutos que ainda não foram sintetizados.`,
+        '',
+        `  ${chalk.cyan('/feedback reset')}`,
+        `    Apaga permanentemente todas as memórias consolidadas e logs de feedback`,
+        `    deste projeto, redefinindo o aprendizado ao estado inicial.`,
+        chalk.bold.cyan('========================================================================'),
       ].join('\n')
 
       return {

@@ -13,16 +13,28 @@ Diferente de solucoes externas, o Stoneage e integrado diretamente no projeto e 
 O Stoneage ja vem incluido como skill nativa do OpenClaw. As skills ficam em:
 
 ```
-.claude/skills/stoneage/
-├── SKILL.md                    ← Skill principal (/stoneage)
+.claude/skills/
+├── stoneage/SKILL.md           ← Skill principal (/stoneage)
 ├── stoneage-commit/SKILL.md    ← /stoneage-commit
 ├── stoneage-review/SKILL.md    ← /stoneage-review
 ├── stoneage-compress/SKILL.md  ← /stoneage-compress
 ├── stoneage-stats/SKILL.md     ← /stoneage-stats
-└── stoneage-help/SKILL.md      ← /stoneage-help
+├── stoneage-help/SKILL.md      ← /stoneage-help
+├── answer-first/SKILL.md       ← /answer-first
+├── code-only/SKILL.md          ← /code-only
+├── context-trim/SKILL.md       ← /context-trim
+├── memory-prune/SKILL.md       ← /memory-prune
+├── session-budget/SKILL.md     ← /session-budget
+├── silent-tools/SKILL.md       ← /silent-tools
+├── task-batch/SKILL.md         ← /task-batch
+└── token-economy/SKILL.md      ← /token-economy
 ```
 
 Nenhuma instalacao adicional e necessaria. O OpenClaw carrega automaticamente.
+
+> **Importante:** Skills devem ficar em `.claude/skills/<nome>/SKILL.md` (flat).
+> Nunca aninhar em subpastas como `.claude/skills/stoneage/<nome>/` — isso gera
+> prefixo de namespace (`stoneage:<nome>`) que quebra o slash command.
 
 ---
 
@@ -265,14 +277,24 @@ Tokens economizados (stoneage): X
 ### Arquivos de Skill
 
 ```
-.claude/skills/stoneage/
-├── SKILL.md                    ← Regras de compressao (3 niveis, auto-clarity)
+.claude/skills/
+├── stoneage/SKILL.md           ← Regras de compressao (3 niveis, auto-clarity)
 ├── stoneage-commit/SKILL.md    ← Conventional Commits ≤50 chars
 ├── stoneage-review/SKILL.md    ← Review em 1 linha com severidade
 ├── stoneage-compress/SKILL.md  ← Compressao de arquivos .md
 ├── stoneage-stats/SKILL.md     ← Estatisticas de economia
-└── stoneage-help/SKILL.md      ← Cartao de referencia
+├── stoneage-help/SKILL.md      ← Cartao de referencia
+├── answer-first/SKILL.md       ← Respostas diretas
+├── code-only/SKILL.md          ← Codigo puro
+├── context-trim/SKILL.md       ← Comprimir tool results
+├── memory-prune/SKILL.md       ← Limpar MEMORY.md
+├── session-budget/SKILL.md     ← Controle de budget por sessao
+├── silent-tools/SKILL.md       ← Resumir output de ferramentas
+├── task-batch/SKILL.md         ← Agrupar tool calls de tasks
+└── token-economy/SKILL.md      ← Skill mestra (liga/desliga todas)
 ```
+
+> **Regra:** Skills devem ser flat em `.claude/skills/`. Nunca aninhar dentro de categorias.
 
 ### Plugin (Hooks + Statusline)
 
@@ -393,20 +415,6 @@ O badge e configurado automaticamente via `settings.json`:
 O script le o flag file e emite o badge apenas quando stoneage esta ativo.
 
 ---
-
-## Comparacao com Caveman
-
-| Aspecto             | Caveman                         | Stoneage                       |
-| ------------------- | ------------------------------- | ------------------------------ |
-| Tipo                | Plugin externo                  | Plugin nativo                  |
-| Identidade          | Broken English                  | Sabedoria primitiva            |
-| Niveis              | 6 (lite/full/ultra + 3 wenyan)  | 3 (lite/full/ultra)            |
-| Buddy integration   | Nao                             | Sim (XP, reacoes, conquistas)  |
-| Compressao de input | Sim (/caveman-compress)         | Sim (/stoneage-compress)       |
-| Stats               | Sim (/caveman-stats)            | Sim (/stoneage-stats)          |
-| Statusline badge    | Sim ([CAVEMAN])                 | Sim ([STONEAGE])               |
-| Hooks               | SessionStart + UserPromptSubmit | Sim (auto-ativacao + per-turn) |
-| Flag file           | ~/.claude/.caveman-active       | ~/.claude/.stoneage-active     |
 
 ---
 

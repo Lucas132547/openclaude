@@ -2846,10 +2846,12 @@ export function REPL({
     }
     if (isBuddyEnabled()) {
       const feedbackResult = getLastDetectedFeedback()
-      void fireCompanionObserver(messagesRef.current, reaction => setAppState(prev => prev.companionReaction === reaction ? prev : {
+      // Pass only current-turn messages for stats accumulation, full history for tool name lookups
+      const currentTurnMessages = messagesRef.current.slice(messagesIncludingNewMessages.length)
+      void fireCompanionObserver(currentTurnMessages, reaction => setAppState(prev => prev.companionReaction === reaction ? prev : {
         ...prev,
         companionReaction: reaction
-      }), feedbackResult ?? undefined)
+      }), feedbackResult ?? undefined, messagesRef.current)
       clearLastDetectedFeedback()
     }
     queryCheckpoint('query_end');

@@ -45,7 +45,8 @@ export const OUTFITS: Outfit[] = [
     requirement: 'Encontrar um easter egg',
     check: () => {
       const memories = getGlobalConfig().companionMemory ?? []
-      return memories.some(m => m.trigger === 'easterEgg')
+      const eggTriggers = ['easterEgg', 'konami', 'doubleRainbow', 'loopInfinite', 'answer42', 'midnightEvolve']
+      return memories.some(m => eggTriggers.includes(m.trigger))
     },
   },
   {
@@ -62,7 +63,7 @@ export const OUTFITS: Outfit[] = [
     name: 'Pixel Art',
     description: 'Skin retro 8-bit',
     requirement: 'Usar o OpenClaude por 100 horas',
-    check: () => ((getGlobalConfig() as any).totalHoursUsed ?? 0) >= 100,
+    check: () => (getGlobalConfig().companionStats?.totalSessionMinutes ?? 0) >= 6000,
   },
   {
     id: 'invisivel',
@@ -81,13 +82,6 @@ export const OUTFITS: Outfit[] = [
     description: 'Flamejante',
     requirement: 'Streak de 60 dias',
     check: () => (getGlobalConfig().companionStreakCount ?? 0) >= 60,
-  },
-  {
-    id: 'geladeira',
-    name: 'Geladeira',
-    description: 'Azul gelada',
-    requirement: 'Trabalhar em 3 projetos',
-    check: () => ((getGlobalConfig() as any).totalProjects ?? 0) >= 3,
   },
   {
     id: 'hacker',

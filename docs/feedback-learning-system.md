@@ -100,17 +100,18 @@ lastSuccess: 2026-05-25
 
 Você pode interagir e gerenciar as regras de feedback aprendidas através do comando `/feedback` diretamente no terminal do OpenClaude:
 
-| Subcomando                            | Descrição                    | Comportamento                                                                                                 |
-| :------------------------------------ | :----------------------------- | :------------------------------------------------------------------------------------------------------------ |
-| **`/feedback`**               | Exibe o menu de ajuda          | Apresenta a lista de subcomandos e sintaxe detalhada.                                                         |
-| **`/feedback confirm`**       | Confirma a última correção  | Aplica um reforço positivo extra (`score +10`) ao padrão detectado na sessão atual.                      |
-| **`/feedback save [texto]`**  | Salva feedback manual          | Analisa contexto da conversa (eventos do log) via `sideQuery` e extrai regra aprendida. Com texto, usa como descrição + contexto. Merge inteligente com memórias existentes. |
-| **`/feedback list`**          | Lista as memórias             | Renderiza uma tabela ASCII organizada contendo: Nome do Arquivo, Score, Confirmações, Status e Descrição. |
-| **`/feedback review`**        | Identifica memórias obsoletas | Lista regras cujo score caiu abaixo de 20 e sugere sua remoção ou recalibração.                           |
-| **`/feedback ignore <tema>`** | Ignora um tema                 | Adiciona `ignored: true` no frontmatter de uma memória para que ela não seja mais injetada.               |
-| **`/feedback synthesize`**    | Consolidação manual          | Aciona o LLM via `sideQuery` imediatamente para processar eventos pendentes em arquivos markdown.           |
-| **`/feedback clear`**         | Limpa logs brutos              | Remove logs brutos mantendo apenas os últimos 5 como histórico de segurança.                               |
-| **`/feedback reset`**         | Redefinição completa         | Exclui permanentemente todos os arquivos `.md` de feedback e logs da pasta de memórias do projeto.         |
+| Subcomando                                | Descrição                         | Comportamento                                                                                                                                                                                   |
+| :---------------------------------------- | :-------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`/feedback`** ou **`/feedback help`**   | Exibe o menu de ajuda detalhado   | Apresenta a lista de subcomandos, sintaxe detalhada e funcionamento do sistema em PT-BR.                                                                                                        |
+| **`/feedback confirm`**                   | Confirma padrão recente           | Confirma o último padrão de correção sugerido pela IA ou, caso nenhum esteja pendente, exibe a lista de interações multiturnos recentes para seleção manual. Concede**+2 XP** ao Buddy.         |
+| **`/feedback approve <número \| regra>`** | Aprova turno ou cria regra direta | Com número (`1` a `5`), confirma a respectiva interação do histórico recente no log de aprendizado. Com texto, cria diretamente uma regra personalizada confirmada. Concede **+2 XP** ao Buddy. |
+| **`/feedback reject <número>`**           | Rejeita comportamento da IA       | Com número (`1` a `5`), sinaliza aquela interação como indesejada (`success = false`). Isso orienta o sintetizador a evitar repetir esse comportamento nas próximas consolidações.              |
+| **`/feedback list`**                      | Lista as memórias                 | Renderiza uma tabela ASCII organizada contendo: Nome do Arquivo, Score, Confirmações, Status e Descrição.                                                                                       |
+| **`/feedback review`**                    | Identifica memórias obsoletas     | Lista regras cujo score caiu abaixo de 20 e sugere sua remoção ou recalibração.                                                                                                                 |
+| **`/feedback ignore <tema>`**             | Ignora um tema                    | Adiciona `ignored: true` no frontmatter de uma memória para que ela não seja mais injetada.                                                                                                     |
+| **`/feedback synthesize`**                | Consolidação manual               | Aciona o LLM via `sideQuery` imediatamente para processar eventos brutos salvos no log e consolidar memórias estruturadas.                                                                      |
+| **`/feedback clear`**                     | Limpa logs brutos                 | Remove logs de eventos brutos que ainda não foram sintetizados.                                                                                                                                 |
+| **`/feedback reset`**                     | Redefinição completa              | Exclui permanentemente todos os arquivos `.md` de feedback e logs da pasta de memórias do projeto.                                                                                              |
 
 ---
 
@@ -120,11 +121,11 @@ O sistema de feedback está integrado ao companion virtual (Buddy). Quando o fee
 
 ### Reações do Buddy
 
-| Evento                | Reação do Buddy                                 |
-| --------------------- | ------------------------------------------------- |
-| Correção detectada  | "Hmm, vou anotar isso para não errar de novo..." |
-| Undo detectado        | "Ops, desfiz algo errado? Vou anotar."            |
-| `/feedback confirm` | "Regra consolidada! +2 XP"                        |
+| Evento                                    | Reação do Buddy                                  |
+| ----------------------------------------- | ------------------------------------------------ |
+| Correção detectada                        | "Hmm, vou anotar isso para não errar de novo..." |
+| Undo detectado                            | "Ops, desfiz algo errado? Vou anotar."           |
+| `/feedback confirm` / `/feedback approve` | "Regra consolidada! +2 XP"                       |
 
 ### Dicas de Feedback
 
@@ -144,7 +145,7 @@ O humor do Buddy reflete a saúde do feedback:
 
 ### XP e Conquistas
 
-- `/feedback confirm` concede **+2 XP** ao Buddy
+- `/feedback confirm` e `/feedback approve` concedem **+2 XP** ao Buddy
 - **Achievements tiered:**
   - 📚 Aprendiz: 5 confirmações
   - 🎓 Mestre: 15 confirmações
