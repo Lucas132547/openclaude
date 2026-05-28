@@ -242,15 +242,28 @@ export async function fireCompanionObserver(
 
       if (lower.includes('/buddy')) {
         // Run checkQuests but ONLY trigger if it actually matches.
-        // For subcommands like /buddy quests, we don't want to trigger buddy_pet.
         let isSubcommand = false
 
+        // Nossas subquests específicas
         if (lower.includes('hidratei')) { checkQuests('buddy_hidratei', undefined, onReaction); isSubcommand = true }
         else if (lower.includes('brincar')) { checkQuests('buddy_brincar', undefined, onReaction); isSubcommand = true }
         else if (lower.includes('stats')) { checkQuests('buddy_stats', undefined, onReaction); isSubcommand = true }
         else if (lower.includes('journal')) { checkQuests('buddy_journal', undefined, onReaction); isSubcommand = true }
         else if (lower.includes('outfits')) { checkQuests('buddy_outfits', undefined, onReaction); isSubcommand = true }
         else if (lower.includes('quests')) { checkQuests('buddy_quests', undefined, onReaction); isSubcommand = true }
+
+        // Qualquer outro subcomando listado na CLI
+        else if (
+          lower.includes('status') || lower.includes('mute') || lower.includes('unmute') ||
+          lower.includes('compact') || lower.includes('decompact') || lower.includes('preview') ||
+          lower.includes('rename') || lower.includes('reroll') || lower.includes('alimentar') ||
+          lower.includes('equipar') || lower.includes('chapeu') || lower.includes('resumo') ||
+          lower.includes('lembrar') || lower.includes('memorias') || lower.includes('evolve') ||
+          lower.includes('requisitos') || lower.includes('premium') || lower.includes('achievements') ||
+          lower.includes('help')
+        ) {
+          isSubcommand = true
+        }
 
         // If it was just '/buddy' and no subcommand matched, then it's a pet
         if (!isSubcommand) {
