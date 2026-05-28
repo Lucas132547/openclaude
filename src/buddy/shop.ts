@@ -90,7 +90,28 @@ export function getShop(): CompanionShop {
   const raw = getGlobalConfig().companionShop
   if (!raw) return { ...DEFAULT_SHOP }
   // Merge with defaults to ensure new fields exist
-  return { ...DEFAULT_SHOP, ...raw }
+  const shop = { ...DEFAULT_SHOP, ...raw }
+  // Migrate: titles that were incorrectly stored in ownedAccessories
+  const titleIds = ['titulo-comum', 'titulo-raro', 'titulo-epico', 'titulo-custom']
+  const titlesInAccessories = shop.ownedAccessories.filter(id => titleIds.includes(id))
+  if (titlesInAccessories.length > 0) {
+    // Move to ownedTitles (avoid duplicates)
+    const existingTitles = new Set(shop.ownedTitles)
+    for (const id of titlesInAccessories) {
+      if (!existingTitles.has(id)) shop.ownedTitles.push(id)
+    }
+    // Remove from ownedAccessories
+    shop.ownedAccessories = shop.ownedAccessories.filter(id => !titleIds.includes(id))
+    // Also migrate equipped title if it was in equippedAccessories
+    const equippedTitle = shop.equippedAccessories.find(id => titleIds.includes(id))
+    if (equippedTitle) {
+      shop.equippedAccessories = shop.equippedAccessories.filter(id => !titleIds.includes(id))
+      shop.equippedTitle = shop.equippedTitle ?? equippedTitle
+    }
+    // Persist migration
+    saveGlobalConfig(curr => ({ ...curr, companionShop: shop }))
+  }
+  return shop
 }
 
 function saveShop(updater: (shop: CompanionShop) => CompanionShop): void {
