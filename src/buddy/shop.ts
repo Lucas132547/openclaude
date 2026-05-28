@@ -316,7 +316,7 @@ export function formatShop(category?: ShopCategory): string {
       const equipped = shop.equippedAccessories.includes(item.id) || shop.equippedTheme === item.id || shop.equippedEmotes === item.id || shop.equippedTitle === item.id
       const status = equipped ? ' ✅' : owned ? ' 🔓' : ''
       const duration = item.duration ? ` (${formatDuration(item.duration)})` : ''
-      lines.push(`  ${item.name} — ${item.price} XP${duration}${status} — ${item.description}`)
+      lines.push(`  [${item.id}] ${item.name} — ${item.price} XP${duration}${status} — ${item.description}`)
     }
     lines.push('')
   }

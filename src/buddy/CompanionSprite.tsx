@@ -12,7 +12,8 @@ import type { Theme } from '../utils/theme.js';
 import { getCompanion } from './companion.js';
 import { isBuddyEnabled } from './feature.js';
 import { getActiveOutfit } from './outfits.js';
-import { getOutfitStyle, renderFace, renderSprite, spriteFrameCount } from './sprites.js';
+import { getOutfitStyle, renderFace, renderSprite, spriteFrameCount, getAccessoryStyles, mergeAccessoryStyles } from './sprites.js';
+import { getShop } from './shop.js';
 import { RARITY_COLORS } from './types.js';
 const TICK_MS = 500;
 const BUBBLE_SHOW = 40; // ticks → ~20s at 500ms
@@ -283,7 +284,7 @@ export function CompanionSprite(): React.ReactNode {
     spriteFrame = tick % frameCount;
   } else {
     const blinkMul = outfitStyle?.blinkSpeed ?? 1
-    const step = IDLE_SEQUENCE[(tick * blinkMul) % IDLE_SEQUENCE.length]!;
+    const step = IDLE_SEQUENCE[Math.floor(tick * blinkMul) % IDLE_SEQUENCE.length]!;
     if (step === -1) {
       spriteFrame = 0;
       blink = true;
@@ -293,25 +294,44 @@ export function CompanionSprite(): React.ReactNode {
   }
   // Outfit effects: custom eye, extra lines, dim
   const outfitEye = outfitStyle?.eye
-  const effectiveCompanion = outfitEye ? { ...companion, eye: outfitEye as any } : companion
+  // Accessory effects
+  const shop = getShop()
+  const accessoryStyles = getAccessoryStyles(shop.equippedAccessories)
+  const accMerged = mergeAccessoryStyles(accessoryStyles)
+  // Accessories can override eye too (monoculo has leftEye/rightEye)
+  const accEye = accMerged.eye
+  const finalEye = accEye ?? outfitEye
+  const effectiveCompanion = finalEye ? { ...companion, eye: finalEye as any } : companion
   // During evolution blink, render empty lines
   const body = (evolveBlink
     ? renderSprite(effectiveCompanion, spriteFrame).map(() => ' '.repeat(24))
     : renderSprite(effectiveCompanion, spriteFrame)
-  ).map(line => {
-    const blinked = blink ? line.replaceAll(effectiveCompanion.eye, '-') : line;
-    if (outfitStyle?.symbol && blinked.trim()) {
-      return `${outfitStyle.symbol}${blinked}${outfitStyle.symbol}`;
+  ).map((line, lineIdx) => {
+    let result = blink ? line.replaceAll(effectiveCompanion.eye, '-') : line;
+    // Outfit symbol
+    if (outfitStyle?.symbol && result.trim()) {
+      result = `${outfitStyle.symbol}${result}${outfitStyle.symbol}`;
     }
-    return blinked;
+    // Accessory monoculo: replace only left eye
+    if (accMerged.leftEye && !accMerged.rightEye) {
+      const eyeChar = effectiveCompanion.eye
+      const idx = result.indexOf(eyeChar)
+      if (idx !== -1) {
+        result = result.substring(0, idx) + accMerged.leftEye + result.substring(idx + eyeChar.length)
+      }
+    }
+    return result
   });
   // Add outfit extra lines
-  const extraTop = outfitStyle?.extraTop ?? []
-  const extraBottom = outfitStyle?.extraBottom ?? []
+  const outfitExtraTop = outfitStyle?.extraTop ?? []
+  const outfitExtraBottom = outfitStyle?.extraBottom ?? []
+  // Merge accessory extra lines
+  const allExtraTop = [...accMerged.extraTop, ...outfitExtraTop]
+  const allExtraBottom = [...accMerged.extraBottom, ...outfitExtraBottom]
   const sprite = [
-    ...extraTop,
+    ...allExtraTop,
     ...(heartFrame ? [heartFrame, ...body] : body),
-    ...extraBottom,
+    ...allExtraBottom,
   ]
 
   // Name row doubles as hint row — unfocused shows dim name + ↓ discovery,

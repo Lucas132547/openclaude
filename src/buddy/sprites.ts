@@ -971,6 +971,95 @@ export type OutfitStyle = {
   keepRarityColor?: boolean; // If true, keep rarity color even if color is set
 };
 
+export type AccessoryStyle = {
+  eye?: string; // Custom eye (single, applies to both)
+  leftEye?: string; // Custom left eye only (for monoculo)
+  rightEye?: string; // Custom right eye only (for monoculo)
+  symbol?: string; // Character to add on left/right sides of each line
+  extraTop?: string[]; // Extra lines above sprite
+  extraBottom?: string[]; // Extra lines below sprite
+  lineTransform?: (line: string, lineIndex: number) => string; // Custom line transform
+};
+
+const ACCESSORY_STYLES: Record<string, AccessoryStyle> = {
+  oculos: {
+    lineTransform: (line, i) => {
+      // Overlay sunglasses on eye area (lines 3-4 of sprite)
+      if (i === 3 || i === 4) {
+        return line.replace(/[\u00BF-\u1FFF\u2010-\u2FFF\u3010-\u9FFF]/g, '■')
+      }
+      return line
+    },
+    symbol: '',
+  },
+  monoculo: {
+    leftEye: '◉',
+    rightEye: undefined,
+  },
+  laco: {
+    extraBottom: ['        ╱╲╱╲             '],
+  },
+  bandana: {
+    extraTop: ['      ▓▓▓▓▓▓▓▓           '],
+  },
+  'coroa-flores': {
+    extraTop: ['     🌸🌼🌸🌼🌸           '],
+  },
+  chifres: {
+    extraTop: ['     /\\      /\\           '],
+  },
+  asas: {
+    symbol: '|',
+    extraTop: ['  ╱              ╲       '],
+    extraBottom: ['  ╲              ╱       '],
+  },
+  capa: {
+    extraBottom: ['   ╲|            |╱      ', '    ╲____________╱       '],
+  },
+  mochila: {
+    symbol: '[',
+    extraBottom: ['       [████]            '],
+  },
+  aura: {
+    extraTop: ['    ·  ·  ·  ·  ·  ·     '],
+    extraBottom: ['    ·  ·  ·  ·  ·  ·     '],
+    symbol: '·',
+  },
+}
+
+export function getAccessoryStyles(accessoryIds: string[]): AccessoryStyle[] {
+  return accessoryIds
+    .map(id => ACCESSORY_STYLES[id])
+    .filter((s): s is AccessoryStyle => !!s)
+}
+
+export function mergeAccessoryStyles(styles: AccessoryStyle[]): {
+  eye?: string
+  leftEye?: string
+  rightEye?: string
+  symbol?: string
+  extraTop: string[]
+  extraBottom: string[]
+} {
+  const result = {
+    eye: undefined as string | undefined,
+    leftEye: undefined as string | undefined,
+    rightEye: undefined as string | undefined,
+    symbol: undefined as string | undefined,
+    extraTop: [] as string[],
+    extraBottom: [] as string[],
+  }
+  for (const style of styles) {
+    if (style.eye) result.eye = style.eye
+    if (style.leftEye) result.leftEye = style.leftEye
+    if (style.rightEye) result.rightEye = style.rightEye
+    if (style.symbol) result.symbol = style.symbol
+    if (style.extraTop) result.extraTop.push(...style.extraTop)
+    if (style.extraBottom) result.extraBottom.push(...style.extraBottom)
+  }
+  return result
+}
+
 const OUTFIT_STYLES: Record<string, OutfitStyle> = {
   dourado: {
     color: "yellow",
