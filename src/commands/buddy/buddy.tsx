@@ -56,6 +56,9 @@ import {
   luckyDraw,
   addToInventory,
   getAllOwnedIds,
+  consumeAbility,
+  hasAbility,
+  formatAbilities,
 } from "../../buddy/shop.js";
 
 const NAME_PREFIXES = [
@@ -134,7 +137,7 @@ function setCompanionReaction(
 
 function showHelp(onDone: LocalJSXCommandOnDone): void {
   onDone(
-    "Uso: /buddy [status|mute|unmute|compact|decompact|preview|rename|reroll|brincar|alimentar|stats|outfits|equipar|outfit|resumo|lembrar|memorias|evolve|requisitos|pet premium|help]\n\nExecute /buddy sem argumentos para chocar seu companion na primeira vez, depois acaricie nas próximas.\n\nFontes de XP:\n  Bash com sucesso: +0.1 XP\n  Pet diário: +1 XP (primeiro /buddy do dia)\n  Task concluída: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n  Brincar: +0.5 XP (cooldown: 1h)\n  Easter eggs: +3 a +20 XP\n\nComandos:\n  /buddy rename <nome> — Custo: 5 XP, Requer Level 2\n  /buddy reroll — Custo: 15 XP (Rerrola atributos mantendo a espécie)\n  /buddy reroll especie — Custo: 50 XP (Rerrola para outra espécie do mesmo Tier de evolução)\n  /buddy brincar — Brinque com seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy pet premium — Ativa modo premium 1h (1 XP)\n  /buddy outfit <nome> — Equipa outfit (2 XP)\n  /buddy evolve — Evolui species (50 XP, Level 5+)\n  /buddy compact — Modo compacto (face de 1 linha)\n  /buddy decompact — Modo completo (sprite 24x10)\n  /buddy preview — Mostra todas as espécies\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)\n  /buddy outfits — Veja os outfits disponíveis\n  /buddy equipar <nome> — Equipe um outfit\n  /buddy chapeu <nome> — Troque seu chapéu\n  /buddy requisitos — Veja requisitos de outfits e chapéus\n  /buddy lembrar <min> <texto> — Define um lembrete\n  /buddy memorias — Veja as memórias do seu buddy\n  /buddy journal — Diário de hoje\n  /buddy achievements — Veja suas conquistas\n  /buddy shop — Visite a loja de itens\n  /buddy shop <categoria> — Filtra por categoria\n  /buddy buy <item-id> — Compra um item com XP\n  /buddy equip <item-id> — Equipa um item\n  /buddy unequip <item-id> — Desequipa um item\n  /buddy inventory — Veja seus itens\n  /buddy draw [comum|raro|epico] — Lucky Draw",
+    "Uso: /buddy [status|mute|unmute|compact|decompact|preview|rename|reroll|brincar|alimentar|stats|outfits|equipar|outfit|resumo|lembrar|memorias|evolve|requisitos|pet premium|help]\n\nExecute /buddy sem argumentos para chocar seu companion na primeira vez, depois acaricie nas próximas.\n\nFontes de XP:\n  Bash com sucesso: +0.1 XP\n  Pet diário: +1 XP (primeiro /buddy do dia)\n  Task concluída: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n  Brincar: +0.5 XP (cooldown: 1h)\n  Easter eggs: +3 a +20 XP\n\nComandos:\n  /buddy rename <nome> — Custo: 5 XP, Requer Level 2\n  /buddy reroll — Custo: 15 XP (Rerrola atributos mantendo a espécie)\n  /buddy reroll especie — Custo: 50 XP (Rerrola para outra espécie do mesmo Tier de evolução)\n  /buddy brincar — Brinque com seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy pet premium — Ativa modo premium 1h (1 XP)\n  /buddy outfit <nome> — Equipa outfit (2 XP)\n  /buddy evolve — Evolui species (50 XP, Level 5+)\n  /buddy compact — Modo compacto (face de 1 linha)\n  /buddy decompact — Modo completo (sprite 24x10)\n  /buddy preview — Mostra todas as espécies\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)\n  /buddy outfits — Veja os outfits disponíveis\n  /buddy equipar <nome> — Equipe um outfit\n  /buddy chapeu <nome> — Troque seu chapéu\n  /buddy requisitos — Veja requisitos de outfits e chapéus\n  /buddy lembrar <min> <texto> — Define um lembrete\n  /buddy memorias — Veja as memórias do seu buddy\n  /buddy journal — Diário de hoje\n  /buddy achievements — Veja suas conquistas\n  /buddy shop — Visite a loja de itens\n  /buddy shop <categoria> — Filtra por categoria\n  /buddy buy <item-id> — Compra um item com XP\n  /buddy equip <item-id> — Equipa um item\n  /buddy unequip <item-id> — Desequipa um item\n  /buddy inventory — Veja seus itens\n  /buddy abilities — Veja abilities ativas\n  /buddy draw [comum|raro|epico] — Lucky Draw",
     { display: "system" },
   );
 }
@@ -397,11 +400,16 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
       return null;
     }
 
-    if (xp < 5) {
-      onDone(`Renomear custa 5 XP. Você só tem ${xp} XP.`, {
+    const freeRename = hasAbility("free-rename");
+    if (!freeRename && xp < 5) {
+      onDone(`Renomear custa 5 XP. Você só tem ${xp} XP. (Ou compre Free Rename na loja!)`, {
         display: "system",
       });
       return null;
+    }
+
+    if (freeRename) {
+      consumeAbility("free-rename");
     }
 
     saveGlobalConfig((current) => ({
@@ -410,7 +418,7 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
         ? {
             ...current.companion,
             name: titleCase(newName),
-            xp: xp - 5,
+            xp: freeRename ? xp : xp - 5,
           }
         : undefined,
     }));
@@ -442,13 +450,18 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
     const cost = isSpeciesReroll ? 50 : 15;
 
     const xp = companion.xp ?? 0;
+    const freeReroll = hasAbility("free-reroll") && !isSpeciesReroll;
 
-    if (xp < cost) {
+    if (!freeReroll && xp < cost) {
       onDone(
-        `Rerrolar ${isSpeciesReroll ? "a espécie " : ""}custa ${cost} XP. Você só tem ${xp} XP.`,
+        `Rerrolar ${isSpeciesReroll ? "a espécie " : ""}custa ${cost} XP. Você só tem ${xp} XP. (Ou compre Free Reroll na loja!)`,
         { display: "system" },
       );
       return null;
+    }
+
+    if (freeReroll) {
+      consumeAbility("free-reroll");
     }
 
     const newSeed = Math.random().toString(36).substring(7);
@@ -480,7 +493,7 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
       companion: current.companion
         ? {
             ...current.companion,
-            xp: xp - cost,
+            xp: freeReroll ? xp : xp - cost,
             seed: newSeed,
             species: newSpecies as any,
             evolvedFrom: newEvolvedFrom,
@@ -492,8 +505,9 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
     setCompanionReaction(context, `*puf* Me sinto diferente!`, true);
 
     const speciesMsg = isSpeciesReroll ? ` para um ${newSpecies}` : "";
+    const costMsg = freeReroll ? "(Free Reroll!)" : `(Custo: ${cost} XP)`;
     onDone(
-      `Buddy rerrolado com sucesso${speciesMsg}! (Custo: ${cost} XP). Execute /buddy status para ver as mudanças.`,
+      `Buddy rerrolado com sucesso${speciesMsg}! ${costMsg}. Execute /buddy status para ver as mudanças.`,
       { display: "system" },
     );
     return null;
@@ -515,14 +529,19 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
     const lastBrincar = config.companionLastAction?.brincar ?? 0;
     const now = Date.now();
     const cooldown = 60 * 60 * 1000; // 1 hora
+    const skipCooldown = hasAbility("skip-cooldown");
 
-    if (now - lastBrincar < cooldown) {
+    if (!skipCooldown && now - lastBrincar < cooldown) {
       const remaining = Math.ceil((cooldown - (now - lastBrincar)) / 60000);
       onDone(
-        `${companion.name} ainda está cansado da última brincadeira. Tente novamente em ${remaining} minutos.`,
+        `${companion.name} ainda está cansado da última brincadeira. Tente novamente em ${remaining} minutos. (Ou compre Skip Cooldown na loja!)`,
         { display: "system" },
       );
       return null;
+    }
+
+    if (skipCooldown) {
+      consumeAbility("skip-cooldown");
     }
 
     const reactions = [
@@ -572,14 +591,19 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
     const lastAlimentar = config.companionLastAction?.alimentar ?? 0;
     const now = Date.now();
     const cooldown = 60 * 60 * 1000; // 1 hora
+    const skipCooldownFeed = hasAbility("skip-cooldown");
 
-    if (now - lastAlimentar < cooldown) {
+    if (!skipCooldownFeed && now - lastAlimentar < cooldown) {
       const remaining = Math.ceil((cooldown - (now - lastAlimentar)) / 60000);
       onDone(
-        `${companion.name} não está com fome agora. Tente novamente em ${remaining} minutos.`,
+        `${companion.name} não está com fome agora. Tente novamente em ${remaining} minutos. (Ou compre Skip Cooldown na loja!)`,
         { display: "system" },
       );
       return null;
+    }
+
+    if (skipCooldownFeed) {
+      consumeAbility("skip-cooldown");
     }
 
     const reactions = [
@@ -1038,6 +1062,17 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
     }
     const category = restArgs[0]?.toLowerCase() as any;
     onDone(formatShop(category || undefined), { display: "system" });
+    return null;
+  }
+
+  // Abilities
+  if (baseCommand === "abilities") {
+    const companion = getCompanion();
+    if (!companion) {
+      onDone("Nenhum buddy ainda. Use /buddy para criar um.", { display: "system" });
+      return null;
+    }
+    onDone(formatAbilities(), { display: "system" });
     return null;
   }
 

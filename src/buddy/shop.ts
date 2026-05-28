@@ -474,3 +474,83 @@ export function hasAbility(itemId: string): boolean {
   const shop = getShop()
   return shop.ownedAbilities.includes(itemId)
 }
+
+// ─── Active Abilities Display ────────────────────────────────────────────────
+
+export function getActiveAbilities(): { name: string; timeLeft: string; isActive: boolean }[] {
+  const shop = getShop()
+  const now = Date.now()
+  const abilities: { name: string; timeLeft: string; isActive: boolean }[] = []
+
+  const timedAbilities: { id: string; name: string; until: number | null }[] = [
+    { id: 'xp-shield', name: '🛡️ XP Shield', until: shop.xpShieldUntil },
+    { id: 'xp-boost', name: '⚡ XP Boost', until: shop.xpBoostUntil },
+    { id: 'xp-magnet', name: '🧲 XP Magnet', until: shop.xpMagnetUntil },
+    { id: 'quick-tips', name: '💡 Quick Tips', until: shop.quickTipsUntil },
+    { id: 'code-review-pro', name: '🔍 Code Review Pro', until: shop.codeReviewProUntil },
+    { id: 'premium', name: '⭐ Premium', until: shop.premiumUntil },
+    { id: 'name-glow', name: '✨ Name Glow', until: shop.nameGlowUntil },
+    { id: 'wall-of-fame', name: '🏆 Wall of Fame', until: shop.wallOfFameUntil },
+  ]
+
+  for (const a of timedAbilities) {
+    if (a.until !== null && a.until > now) {
+      const diff = a.until - now
+      abilities.push({ name: a.name, timeLeft: formatTimeLeft(diff), isActive: true })
+    }
+  }
+
+  // Passivas
+  const passivas: { id: string; name: string }[] = [
+    { id: 'memory-boost', name: '🧠 Memory Boost' },
+    { id: 'lucky-star', name: '🌟 Lucky Star' },
+    { id: 'deep-scan', name: '🔬 Deep Scan' },
+    { id: 'streak-shield', name: '🛡️ Streak Shield' },
+    { id: 'veteran-luck', name: '🍀 Veteran\'s Luck' },
+    { id: 'bug-buddy', name: '🐛 Bug Buddy' },
+  ]
+
+  for (const p of passivas) {
+    if (shop.ownedAbilities.includes(p.id)) {
+      abilities.push({ name: p.name, timeLeft: 'permanente', isActive: true })
+    }
+  }
+
+  // Consumíveis
+  const consumables: { id: string; name: string }[] = [
+    { id: 'free-reroll', name: '🎲 Free Reroll' },
+    { id: 'free-rename', name: '✏️ Free Rename' },
+    { id: 'skip-cooldown', name: '⏱️ Skip Cooldown' },
+  ]
+
+  for (const c of consumables) {
+    if (shop.ownedAbilities.includes(c.id)) {
+      abilities.push({ name: c.name, timeLeft: '1 uso', isActive: true })
+    }
+  }
+
+  return abilities
+}
+
+function formatTimeLeft(ms: number): string {
+  if (ms <= 0) return 'expirada'
+  const hours = Math.floor(ms / (1000 * 60 * 60))
+  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60))
+  if (hours > 24) {
+    const days = Math.floor(hours / 24)
+    return `${days}d ${hours % 24}h`
+  }
+  if (hours > 0) return `${hours}h ${minutes}min`
+  return `${minutes}min`
+}
+
+export function formatAbilities(): string {
+  const abilities = getActiveAbilities()
+  if (abilities.length === 0) {
+    return 'Nenhuma ability ativa. Visite /buddy shop abilities para comprar!'
+  }
+  const lines = abilities.map(a => {
+    return `  ${a.name} — ${a.timeLeft}`
+  })
+  return `⚡ Abilities ativas:\n${lines.join('\n')}`
+}
