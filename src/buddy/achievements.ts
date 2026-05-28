@@ -341,6 +341,68 @@ export const ACHIEVEMENTS: Achievement[] = [
     xpReward: 50,
     check: () => (getGlobalConfig().companionStats?.totalTokensSaved ?? 0) >= 50000,
   },
+  // ─── XP Loss Achievements ──────────────────────────────────────────────────
+  {
+    id: 'phoenix',
+    name: 'Phoenix',
+    description: 'Recuperar 50 XP perdidos total',
+    emoji: '🔥',
+    xpReward: 10,
+    check: () => (getGlobalConfig().companionXpLossLog?.totalLost ?? 0) >= 50,
+  },
+  {
+    id: 'descuidado',
+    name: 'Descuidado',
+    description: 'Tomar penalidade de Buddy Solitário 3 vezes',
+    emoji: '😢',
+    xpReward: 5,
+    check: () => (getGlobalConfig().companionXpLossLog?.solitarioCount ?? 0) >= 3,
+  },
+  {
+    id: 'cuidador-devoto',
+    name: 'Cuidador Devoto',
+    description: 'Fazer pet 30 dias seguidos sem falhar',
+    emoji: '💝',
+    xpReward: 25,
+    check: () => (getGlobalConfig().companionStreakCount ?? 0) >= 30,
+  },
+  {
+    id: 'shield-master',
+    name: 'Shield Master',
+    description: 'Usar XP Shield 10 vezes',
+    emoji: '🛡️',
+    xpReward: 20,
+    check: () => (getGlobalConfig().companionShop?.shieldUseCount ?? 0) >= 10,
+  },
+  {
+    id: 'resiliente',
+    name: 'Resiliente',
+    description: 'Perder 20 XP em uma sessão e continuar',
+    emoji: '💪',
+    xpReward: 5,
+    check: () => (getGlobalConfig().companionXpLossLog?.lossesThisSession ?? 0) >= 20,
+  },
+  {
+    id: 'lucky-charm',
+    name: 'Lucky Charm',
+    description: 'Veteran\'s Luck bloquear 5 perdas',
+    emoji: '🍀',
+    xpReward: 10,
+    check: () => (getGlobalConfig().companionShop?.luckyBlocks ?? 0) >= 5,
+  },
+  {
+    id: 'shopaholic',
+    name: 'Shopaholic',
+    description: 'Comprar 10 itens na loja',
+    emoji: '🛍️',
+    xpReward: 15,
+    check: () => {
+      const shop = getGlobalConfig().companionShop
+      if (!shop) return false
+      const total = shop.ownedAccessories.length + shop.ownedThemes.length + shop.ownedEmotes.length + shop.ownedAbilities.length
+      return total >= 10
+    },
+  },
 ]
 
 export function getUnlockedAchievements(): Achievement[] {
