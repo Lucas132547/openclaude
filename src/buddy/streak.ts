@@ -1,4 +1,5 @@
 import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js'
+import { hasAbility, consumeAbility } from './shop.js'
 
 function getTodayLocal(): string {
   const now = new Date()
@@ -27,7 +28,14 @@ export function processStreak(): { streak: number, bonusXp: number, message: str
   if (lastDate === yesterday) {
     streak += 1
   } else {
-    streak = 1
+    // Streak Shield: se tem a ability, protege o streak (consome)
+    if (hasAbility('streak-shield')) {
+      consumeAbility('streak-shield')
+      message = '🛡️ Streak Shield ativado! Seu streak foi protegido!'
+      streak += 1 // mantém o streak
+    } else {
+      streak = 1
+    }
   }
 
   if (streak === 3) { bonusXp = 0.5; message = '🔥 3 dias seguidos! +0.5 XP de bônus!' }

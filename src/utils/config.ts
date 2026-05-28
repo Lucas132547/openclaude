@@ -27,6 +27,7 @@ import { stripBOM } from './jsonRead.js'
 import * as lockfile from './lockfile.js'
 import { logError } from './log.js'
 import type { MemoryType } from './memory/types.js'
+import type { CompanionShop } from '../buddy/types.js'
 import { normalizePathForConfigKey } from './path.js'
 import { getEssentialTrafficOnlyReason } from './privacyLevel.js'
 import { getManagedFilePath } from './settings/managedPath.js'
@@ -331,31 +332,7 @@ export type GlobalConfig = {
   companionOutfits?: string[]
   companionActiveOutfit?: string
   companionAchievements?: string[]
-  companionShop?: {
-    ownedAccessories: string[]
-    ownedThemes: string[]
-    ownedEmotes: string[]
-    ownedAbilities: string[]
-    ownedTitles: string[]
-    activeAbilities: { id: string; expiresAt: number }[]
-    equippedAccessories: string[]
-    equippedTheme: string | null
-    equippedEmotes: string | null
-    equippedTitle: string | null
-    customTitle: string | null
-    xpShieldUntil: number | null
-    quickTipsUntil: number | null
-    codeReviewProUntil: number | null
-    xpBoostUntil: number | null
-    xpMagnetUntil: number | null
-    premiumUntil: number | null
-    nameGlowUntil: number | null
-    wallOfFameUntil: number | null
-    veteranLuckUnlocked: boolean
-    bugBuddyUnlocked: boolean
-    shieldUseCount: number
-    luckyBlocks: number
-  }
+  companionShop?: CompanionShop
   companionXpLossLog?: {
     totalLost: number
     lastLossDate: string

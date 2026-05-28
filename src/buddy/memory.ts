@@ -1,6 +1,8 @@
 import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js'
+import { hasAbility } from './shop.js'
 
 const MAX_MEMORIES = 20
+const MAX_MEMORIES_BOOSTED = 30
 
 const MEMORY_TRIGGERS = {
   firstLevelUp: (level: number) => `Subiu para o Nível ${level} pela primeira vez!`,
@@ -40,7 +42,8 @@ export function addMemory(trigger: MemoryTrigger, ...args: unknown[]): void {
     trigger,
   }
 
-  const updated = [...existing, memory].slice(-MAX_MEMORIES)
+  const max = hasAbility('memory-boost') ? MAX_MEMORIES_BOOSTED : MAX_MEMORIES
+  const updated = [...existing, memory].slice(-max)
 
   saveGlobalConfig(curr => ({
     ...curr,

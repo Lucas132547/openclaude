@@ -352,6 +352,16 @@ export function formatShop(category?: ShopCategory): string {
     lines.push('')
   }
 
+  // Show active abilities with time remaining
+  const activeAbilities = getActiveAbilities().filter(a => a.isActive)
+  if (activeAbilities.length > 0) {
+    lines.push('⏰ Abilities Ativas:')
+    for (const a of activeAbilities) {
+      lines.push(`  ${a.name} — ${a.timeLeft}`)
+    }
+    lines.push('')
+  }
+
   return lines.join('\n')
 }
 

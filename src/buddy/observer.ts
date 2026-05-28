@@ -11,7 +11,7 @@ import { checkKonamiCode, checkAnswer42 } from './easter-eggs.js'
 import { addMemory } from './memory.js'
 import { checkAndGrantAchievementXp } from './achievements.js'
 import { tryLoseXp, checkBuddySolitario, getXpMultiplier } from './xp-loss.js'
-import { getEmoteReaction } from './shop.js'
+import { getEmoteReaction, getShop } from './shop.js'
 
 const DIRECT_REPLIES = [
   'Estou observando.',
@@ -660,8 +660,13 @@ export async function fireCompanionObserver(
     })
   }
 
-  // --- Emit the winning reaction ---
+  // --- Emit the winning reaction (with emote enhancement) ---
   if (chosenReaction) {
+    // Emote integration: chance to append emote flavor if equipped
+    const emoteReaction = getEmoteReaction(getShop().equippedEmotes)
+    if (emoteReaction && Math.random() < 0.3) {
+      chosenReaction = `${chosenReaction} ${emoteReaction}`
+    }
     onReaction(chosenReaction)
     if (currentOnChosen) currentOnChosen()
   }

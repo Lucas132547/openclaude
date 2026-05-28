@@ -488,6 +488,10 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
       }
     }
 
+    // Shiny roll: 1% normal, 5% with Lucky Star
+    const shinyChance = hasAbility("lucky-star") ? 0.05 : 0.01;
+    const newShiny = companion.shiny || Math.random() < shinyChance;
+
     saveGlobalConfig((current) => ({
       ...current,
       companion: current.companion
@@ -497,12 +501,14 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
             seed: newSeed,
             species: newSpecies as any,
             evolvedFrom: newEvolvedFrom,
+            shiny: newShiny,
           }
         : undefined,
     }));
 
     addMemory("reroll");
-    setCompanionReaction(context, `*puf* Me sinto diferente!`, true);
+    const shinyMsg = newShiny && !companion.shiny ? " ✨ SHINY!" : "";
+    setCompanionReaction(context, `*puf* Me sinto diferente!${shinyMsg}`, true);
 
     const speciesMsg = isSpeciesReroll ? ` para um ${newSpecies}` : "";
     const costMsg = freeReroll ? "(Free Reroll!)" : `(Custo: ${cost} XP)`;
