@@ -65,6 +65,7 @@ const DEFAULT_SHOP: CompanionShop = {
   ownedThemes: [],
   ownedEmotes: [],
   ownedAbilities: [],
+  ownedTitles: [],
   activeAbilities: [],
   equippedAccessories: [],
   equippedTheme: null,
@@ -110,17 +111,19 @@ function getOwnedList(shop: CompanionShop, category: ShopCategory): string[] {
     case 'temas': return shop.ownedThemes
     case 'emotes': return shop.ownedEmotes
     case 'abilities': return shop.ownedAbilities
-    case 'titulos': return shop.ownedAccessories // títulos ficam em accessories
+    case 'titulos': return shop.ownedTitles
   }
 }
 
 function addToOwnedList(shop: CompanionShop, category: ShopCategory, id: string): CompanionShop {
+  const existing = getOwnedList(shop, category)
+  if (existing.includes(id)) return shop // dedup guard
   switch (category) {
     case 'acessorios': return { ...shop, ownedAccessories: [...shop.ownedAccessories, id] }
     case 'temas': return { ...shop, ownedThemes: [...shop.ownedThemes, id] }
     case 'emotes': return { ...shop, ownedEmotes: [...shop.ownedEmotes, id] }
     case 'abilities': return { ...shop, ownedAbilities: [...shop.ownedAbilities, id] }
-    case 'titulos': return { ...shop, ownedAccessories: [...shop.ownedAccessories, id] }
+    case 'titulos': return { ...shop, ownedTitles: [...shop.ownedTitles, id] }
   }
 }
 
@@ -154,7 +157,7 @@ export function buyItem(itemId: string): BuyResult {
 
   saveGlobalConfig(curr => ({
     ...curr,
-    companion: curr.companion ? { ...curr.companion, xp: Math.round((xp - item.price) * 100) / 100 } : undefined,
+    companion: curr.companion ? { ...curr.companion, xp: Math.round(((curr.companion.xp ?? 0) - item.price) * 100) / 100 } : undefined,
   }))
 
   saveShop(curr => addToOwnedList(curr, item.category, itemId))
@@ -282,6 +285,7 @@ export function getInventory(): { owned: ShopItem[]; equipped: string[] } {
     ...shop.ownedThemes,
     ...shop.ownedEmotes,
     ...shop.ownedAbilities,
+    ...shop.ownedTitles,
   ]
   const owned = allOwned
     .map(id => getItemById(id))
@@ -337,18 +341,43 @@ export type DrawResult = {
   jackpot: boolean
 }
 
-export function luckyDraw(tier: 'common' | 'rare' | 'epic'): DrawResult {
+export function luckyDraw(tier: 'common' | 'rare' | 'epic', ownedIds: string[] = []): DrawResult {
   const maxPrice = tier === 'common' ? 15 : tier === 'rare' ? 40 : 999
-  const pool = SHOP_ITEMS.filter(i => i.price <= maxPrice)
-  const item = pool[Math.floor(Math.random() * pool.length)]!
+  const consumables = ['free-reroll', 'free-rename', 'skip-cooldown', 'force-evolve']
+  const pool = SHOP_ITEMS.filter(i => i.price <= maxPrice && (consumables.includes(i.id) || !ownedIds.includes(i.id)))
+  const safePool = pool.length > 0 ? pool : SHOP_ITEMS.filter(i => i.price <= maxPrice)
+  const item = safePool[Math.floor(Math.random() * safePool.length)]!
 
   const jackpot = Math.random() < 0.05
   if (jackpot && tier !== 'epic') {
     const nextTier = tier === 'common' ? 'rare' : 'epic'
-    return luckyDraw(nextTier)
+    return luckyDraw(nextTier, ownedIds)
   }
 
   return { item, jackpot }
+}
+
+// ─── Consume Ability ─────────────────────────────────────────────────────────
+
+export function consumeAbility(itemId: string): boolean {
+  const shop = getShop()
+  if (!shop.ownedAbilities.includes(itemId)) return false
+  saveShop(curr => ({
+    ...curr,
+    ownedAbilities: curr.ownedAbilities.filter(id => id !== itemId),
+  }))
+  return true
+}
+
+export function getAllOwnedIds(): string[] {
+  const shop = getShop()
+  return [
+    ...shop.ownedAccessories,
+    ...shop.ownedThemes,
+    ...shop.ownedEmotes,
+    ...shop.ownedAbilities,
+    ...shop.ownedTitles,
+  ]
 }
 
 // ─── Ability Checks (for observer integration) ──────────────────────────────

@@ -336,6 +336,7 @@ export type GlobalConfig = {
     ownedThemes: string[]
     ownedEmotes: string[]
     ownedAbilities: string[]
+    ownedTitles: string[]
     activeAbilities: { id: string; expiresAt: number }[]
     equippedAccessories: string[]
     equippedTheme: string | null

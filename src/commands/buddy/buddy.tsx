@@ -55,6 +55,7 @@ import {
   formatShop,
   luckyDraw,
   addToInventory,
+  getAllOwnedIds,
 } from "../../buddy/shop.js";
 
 const NAME_PREFIXES = [
@@ -1140,7 +1141,7 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
       companion: curr.companion ? { ...curr.companion, xp: Math.round((xp - price) * 100) / 100 } : undefined,
     }));
 
-    const result = luckyDraw(tier);
+    const result = luckyDraw(tier, getAllOwnedIds());
     addToInventory(result.item.id);
 
     const jackpotMsg = result.jackpot ? "\n🎰 JACKPOT! Item de tier superior!" : "";

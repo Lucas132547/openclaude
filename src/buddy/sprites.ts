@@ -971,30 +971,71 @@ export type OutfitStyle = {
   keepRarityColor?: boolean; // If true, keep rarity color even if color is set
 };
 
+export type ThemeStyle = {
+  color?: string; // Override text color
+  extraTop?: string[];
+  extraBottom?: string[];
+  dimColor?: boolean;
+};
+
+const THEME_STYLES: Record<string, ThemeStyle> = {
+  'fundo-noturno': {
+    color: 'blue',
+    extraTop: ['    ✦  ·  ✦    ·   ✦    '],
+    extraBottom: ['   ·    ✦   ·    ✦   ·  '],
+  },
+  'fundo-oceanico': {
+    color: 'cyan',
+    extraTop: ['   ~  ~  ~  ~  ~  ~  ~  '],
+    extraBottom: ['  ~  ~  ~  ~  ~  ~  ~   '],
+  },
+  'fundo-espacial': {
+    color: 'magenta',
+    extraTop: ['  ✦  ·  ✦  ·  ✦  ·  ✦  '],
+    extraBottom: ['  ·  ✦  ·  ✦  ·  ✦  ·  '],
+  },
+  'fogo': {
+    color: 'red',
+    extraTop: ['    🔥  🔥  🔥  🔥  🔥   '],
+    extraBottom: ['   🔥  🔥  🔥  🔥  🔥    '],
+  },
+  'neve': {
+    color: 'white',
+    extraTop: ['   ❄  ·  ❄  ·  ❄  ·  ❄ '],
+    extraBottom: ['  ·  ❄  ·  ❄  ·  ❄  ·  '],
+  },
+  'glitch': {
+    color: 'green',
+    extraTop: ['   ▓▒░ GLITCH ░▒▓       '],
+    extraBottom: ['   ░▒▓ GLITCH ▓▒░       '],
+  },
+  'pixel-hearts': {
+    color: 'red',
+    extraTop: ['    ♥  ♥  ♥  ♥  ♥  ♥    '],
+    extraBottom: ['   ♥  ♥  ♥  ♥  ♥  ♥     '],
+  },
+}
+
+export function getThemeStyle(themeId: string | null): ThemeStyle | undefined {
+  if (!themeId) return undefined
+  return THEME_STYLES[themeId]
+}
+
 export type AccessoryStyle = {
   eye?: string; // Custom eye (single, applies to both)
   leftEye?: string; // Custom left eye only (for monoculo)
   rightEye?: string; // Custom right eye only (for monoculo)
-  symbol?: string; // Character to add on left/right sides of each line
   extraTop?: string[]; // Extra lines above sprite
   extraBottom?: string[]; // Extra lines below sprite
-  lineTransform?: (line: string, lineIndex: number) => string; // Custom line transform
 };
 
 const ACCESSORY_STYLES: Record<string, AccessoryStyle> = {
   oculos: {
-    lineTransform: (line, i) => {
-      // Overlay sunglasses on eye area (lines 3-4 of sprite)
-      if (i === 3 || i === 4) {
-        return line.replace(/[\u00BF-\u1FFF\u2010-\u2FFF\u3010-\u9FFF]/g, '■')
-      }
-      return line
-    },
-    symbol: '',
+    leftEye: '■',
+    rightEye: '■',
   },
   monoculo: {
     leftEye: '◉',
-    rightEye: undefined,
   },
   laco: {
     extraBottom: ['        ╱╲╱╲             '],
@@ -1009,7 +1050,6 @@ const ACCESSORY_STYLES: Record<string, AccessoryStyle> = {
     extraTop: ['     /\\      /\\           '],
   },
   asas: {
-    symbol: '|',
     extraTop: ['  ╱              ╲       '],
     extraBottom: ['  ╲              ╱       '],
   },
@@ -1017,13 +1057,11 @@ const ACCESSORY_STYLES: Record<string, AccessoryStyle> = {
     extraBottom: ['   ╲|            |╱      ', '    ╲____________╱       '],
   },
   mochila: {
-    symbol: '[',
     extraBottom: ['       [████]            '],
   },
   aura: {
     extraTop: ['    ·  ·  ·  ·  ·  ·     '],
     extraBottom: ['    ·  ·  ·  ·  ·  ·     '],
-    symbol: '·',
   },
 }
 
@@ -1037,7 +1075,6 @@ export function mergeAccessoryStyles(styles: AccessoryStyle[]): {
   eye?: string
   leftEye?: string
   rightEye?: string
-  symbol?: string
   extraTop: string[]
   extraBottom: string[]
 } {
@@ -1045,7 +1082,6 @@ export function mergeAccessoryStyles(styles: AccessoryStyle[]): {
     eye: undefined as string | undefined,
     leftEye: undefined as string | undefined,
     rightEye: undefined as string | undefined,
-    symbol: undefined as string | undefined,
     extraTop: [] as string[],
     extraBottom: [] as string[],
   }
@@ -1053,7 +1089,6 @@ export function mergeAccessoryStyles(styles: AccessoryStyle[]): {
     if (style.eye) result.eye = style.eye
     if (style.leftEye) result.leftEye = style.leftEye
     if (style.rightEye) result.rightEye = style.rightEye
-    if (style.symbol) result.symbol = style.symbol
     if (style.extraTop) result.extraTop.push(...style.extraTop)
     if (style.extraBottom) result.extraBottom.push(...style.extraBottom)
   }

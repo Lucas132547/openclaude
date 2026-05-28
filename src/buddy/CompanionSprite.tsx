@@ -12,7 +12,7 @@ import type { Theme } from '../utils/theme.js';
 import { getCompanion } from './companion.js';
 import { isBuddyEnabled } from './feature.js';
 import { getActiveOutfit } from './outfits.js';
-import { getOutfitStyle, renderFace, renderSprite, spriteFrameCount, getAccessoryStyles, mergeAccessoryStyles } from './sprites.js';
+import { getOutfitStyle, renderFace, renderSprite, spriteFrameCount, getAccessoryStyles, mergeAccessoryStyles, getThemeStyle } from './sprites.js';
 import { getShop } from './shop.js';
 import { RARITY_COLORS } from './types.js';
 const TICK_MS = 500;
@@ -298,6 +298,14 @@ export function CompanionSprite(): React.ReactNode {
   const shop = getShop()
   const accessoryStyles = getAccessoryStyles(shop.equippedAccessories)
   const accMerged = mergeAccessoryStyles(accessoryStyles)
+  // Theme effects
+  const themeStyle = getThemeStyle(shop.equippedTheme)
+  // Title display
+  const equippedTitle = shop.equippedTitle
+  const titleItem = equippedTitle ? (() => {
+    const t = { 'titulo-comum': 'Code Apprentice', 'titulo-raro': 'Bug Destroyer', 'titulo-epico': 'Architect of Dreams' }[equippedTitle]
+    return t || (shop.customTitle || null)
+  })() : null
   // Accessories can override eye too (monoculo has leftEye/rightEye)
   const accEye = accMerged.eye
   const finalEye = accEye ?? outfitEye
@@ -312,12 +320,19 @@ export function CompanionSprite(): React.ReactNode {
     if (outfitStyle?.symbol && result.trim()) {
       result = `${outfitStyle.symbol}${result}${outfitStyle.symbol}`;
     }
-    // Accessory monoculo: replace only left eye
-    if (accMerged.leftEye && !accMerged.rightEye) {
-      const eyeChar = effectiveCompanion.eye
+    // Accessory eye replacements (monoculo: leftEye only, oculos: both)
+    if (accMerged.leftEye || accMerged.rightEye) {
+      const eyeChar = blink ? '-' : effectiveCompanion.eye
       const idx = result.indexOf(eyeChar)
       if (idx !== -1) {
-        result = result.substring(0, idx) + accMerged.leftEye + result.substring(idx + eyeChar.length)
+        const replacement = accMerged.leftEye ?? eyeChar
+        result = result.substring(0, idx) + replacement + result.substring(idx + eyeChar.length)
+      }
+      if (accMerged.rightEye) {
+        const secondIdx = result.indexOf(eyeChar, idx + 1)
+        if (secondIdx !== -1) {
+          result = result.substring(0, secondIdx) + accMerged.rightEye + result.substring(secondIdx + eyeChar.length)
+        }
       }
     }
     return result
@@ -325,9 +340,11 @@ export function CompanionSprite(): React.ReactNode {
   // Add outfit extra lines
   const outfitExtraTop = outfitStyle?.extraTop ?? []
   const outfitExtraBottom = outfitStyle?.extraBottom ?? []
-  // Merge accessory extra lines
-  const allExtraTop = [...accMerged.extraTop, ...outfitExtraTop]
-  const allExtraBottom = [...accMerged.extraBottom, ...outfitExtraBottom]
+  // Merge all extra lines: theme + accessories + outfit
+  const themeExtraTop = themeStyle?.extraTop ?? []
+  const themeExtraBottom = themeStyle?.extraBottom ?? []
+  const allExtraTop = [...themeExtraTop, ...accMerged.extraTop, ...outfitExtraTop]
+  const allExtraBottom = [...outfitExtraBottom, ...accMerged.extraBottom, ...themeExtraBottom]
   const sprite = [
     ...allExtraTop,
     ...(heartFrame ? [heartFrame, ...body] : body),
@@ -340,13 +357,15 @@ export function CompanionSprite(): React.ReactNode {
   // sprite doesn't jump up when selected. flexShrink=0 stops the
   // inline-bubble row wrapper from squeezing the sprite to fit.
   const isDim = outfitStyle?.dim ?? false
+  const spriteColor = themeStyle?.color ?? color
   const spriteColumn = <Box flexDirection="column" flexShrink={0} alignItems="center" width={colWidth}>
-      {sprite.map((line, i) => <Text key={i} color={i === 0 && heartFrame ? 'autoAccept' : color} dimColor={isDim}>
+      {sprite.map((line, i) => <Text key={i} color={i === 0 && heartFrame ? 'autoAccept' : spriteColor} dimColor={isDim}>
           {line}
         </Text>)}
-      <Text italic bold={focused} dimColor={!focused} color={focused ? color : undefined} inverse={focused}>
+      <Text italic bold={focused} dimColor={!focused} color={focused ? spriteColor : undefined} inverse={focused}>
         {focused ? ` ${companion.name} ` : companion.name}
       </Text>
+      {titleItem && <Text italic dimColor color="gray" fontSize={1}>{titleItem}</Text>}
     </Box>;
   if (!reaction) {
     return <Box paddingX={1}>{spriteColumn}</Box>;
