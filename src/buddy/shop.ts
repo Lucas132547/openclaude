@@ -237,6 +237,9 @@ export function equipItem(itemId: string): EquipResult {
       saveShop(curr => ({ ...curr, equippedTitle: itemId }))
       return { success: true, message: 'Título equipado!' }
     }
+    case 'abilities': {
+      return { success: false, message: 'Abilities são ativadas automaticamente na compra! Use /buddy buy para ativar.' }
+    }
     default:
       return { success: false, message: 'Esse item não pode ser equipado.' }
   }
@@ -378,6 +381,42 @@ export function getAllOwnedIds(): string[] {
     ...shop.ownedAbilities,
     ...shop.ownedTitles,
   ]
+}
+
+// ─── Emote Reactions ─────────────────────────────────────────────────────────
+
+const EMOTE_REACTIONS: Record<string, string[]> = {
+  'emote-comemorativo': [
+    "Vamos celebrar! 🎉",
+    "Isso merece uma festa! 🎊",
+    "Uhuuul! 🥳",
+    "Hora da comemoração! 🎈",
+  ],
+  'emote-motivacional': [
+    "Você consegue! 💪",
+    "Acredite em si mesmo! ✨",
+    "Continue assim! 🌟",
+    "Não desista! 🔥",
+  ],
+  'emote-snarky': [
+    "Ah, claro, como se isso fosse difícil... 🙄",
+    "Uau, que surpresa... 😒",
+    "Tá bom, vamos lá... 😤",
+    "Se você diz... 😏",
+  ],
+  'emote-zen': [
+    "Respirar... 🧘",
+    "Paz interior... 🙏",
+    "Tudo no seu tempo... ☯️",
+    "Siga o fluxo... 🌊",
+  ],
+}
+
+export function getEmoteReaction(emoteId: string | null): string | null {
+  if (!emoteId) return null
+  const reactions = EMOTE_REACTIONS[emoteId]
+  if (!reactions || reactions.length === 0) return null
+  return reactions[Math.floor(Math.random() * reactions.length)] ?? null
 }
 
 // ─── Ability Checks (for observer integration) ──────────────────────────────
