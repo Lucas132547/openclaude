@@ -47,6 +47,15 @@ import { getTodayJournal, formatJournal } from "../../buddy/journal.js";
 import { getSeasonalMessage } from "../../buddy/seasonal.js";
 import { getAchievementProgress } from "../../buddy/achievements.js";
 import { COMMON_HELP_ARGS, COMMON_INFO_ARGS } from "../../constants/xml.js";
+import {
+  buyItem,
+  equipItem,
+  unequipItem,
+  getInventory,
+  formatShop,
+  luckyDraw,
+  addToInventory,
+} from "../../buddy/shop.js";
 
 const NAME_PREFIXES = [
   "Byte",
@@ -1016,6 +1025,127 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
     onDone(`Buddy modo ${compact ? "compacto" : "completo"}.`, {
       display: "system",
     });
+    return null;
+  }
+
+  // Shop
+  if (baseCommand === "shop") {
+    const companion = getCompanion();
+    if (!companion) {
+      onDone("Nenhum buddy ainda. Use /buddy para criar um.", { display: "system" });
+      return null;
+    }
+    const category = restArgs[0]?.toLowerCase() as any;
+    onDone(formatShop(category || undefined), { display: "system" });
+    return null;
+  }
+
+  // Buy
+  if (baseCommand === "buy") {
+    const companion = getCompanion();
+    if (!companion) {
+      onDone("Nenhum buddy ainda. Use /buddy para criar um.", { display: "system" });
+      return null;
+    }
+    const itemId = restArgs.join("-").toLowerCase();
+    if (!itemId) {
+      onDone("Uso: /buddy buy <item-id>\nVeja os itens com /buddy shop", { display: "system" });
+      return null;
+    }
+    const result = buyItem(itemId);
+    if (result.success) {
+      setCompanionReaction(context, `${companion.name}: ${result.message}`, true);
+    }
+    onDone(result.message, { display: "system" });
+    return null;
+  }
+
+  // Equip
+  if (baseCommand === "equip") {
+    const companion = getCompanion();
+    if (!companion) {
+      onDone("Nenhum buddy ainda. Use /buddy para criar um.", { display: "system" });
+      return null;
+    }
+    const itemId = restArgs.join("-").toLowerCase();
+    if (!itemId) {
+      onDone("Uso: /buddy equip <item-id>\nVeja seus itens com /buddy inventory", { display: "system" });
+      return null;
+    }
+    const result = equipItem(itemId);
+    if (result.success) {
+      setCompanionReaction(context, `${companion.name}: ${result.message}`, true);
+    }
+    onDone(result.message, { display: "system" });
+    return null;
+  }
+
+  // Unequip
+  if (baseCommand === "unequip") {
+    const companion = getCompanion();
+    if (!companion) {
+      onDone("Nenhum buddy ainda. Use /buddy para criar um.", { display: "system" });
+      return null;
+    }
+    const itemId = restArgs.join("-").toLowerCase();
+    if (!itemId) {
+      onDone("Uso: /buddy unequip <item-id>", { display: "system" });
+      return null;
+    }
+    const result = unequipItem(itemId);
+    onDone(result.message, { display: "system" });
+    return null;
+  }
+
+  // Inventory
+  if (arg === "inventory" || arg === "inventario") {
+    const companion = getCompanion();
+    if (!companion) {
+      onDone("Nenhum buddy ainda. Use /buddy para criar um.", { display: "system" });
+      return null;
+    }
+    const inv = getInventory();
+    if (inv.owned.length === 0) {
+      onDone(`${companion.name} não tem nenhum item. Visite /buddy shop!`, { display: "system" });
+      return null;
+    }
+    const lines = inv.owned.map(item => {
+      const equipped = inv.equipped.includes(item.id) ? " ✅" : "";
+      return `  ${item.name}${equipped} — ${item.description}`;
+    });
+    onDone(`🎒 Inventário do ${companion.name}:\n${lines.join("\n")}`, { display: "system" });
+    return null;
+  }
+
+  // Draw
+  if (baseCommand === "draw") {
+    const companion = getCompanion();
+    if (!companion) {
+      onDone("Nenhum buddy ainda. Use /buddy para criar um.", { display: "system" });
+      return null;
+    }
+    const tierArg = restArgs[0]?.toLowerCase();
+    const tier = tierArg === "raro" ? "rare" : tierArg === "epico" || tierArg === "épico" ? "epic" : "common";
+    const prices: Record<string, number> = { common: 10, rare: 30, epic: 60 };
+    const price = prices[tier]!;
+
+    const xp = companion.xp ?? 0;
+    if (xp < price) {
+      onDone(`Lucky Draw (${tier}) custa ${price} XP. Você só tem ${xp} XP.`, { display: "system" });
+      return null;
+    }
+
+    saveGlobalConfig(curr => ({
+      ...curr,
+      companion: curr.companion ? { ...curr.companion, xp: Math.round((xp - price) * 100) / 100 } : undefined,
+    }));
+
+    const result = luckyDraw(tier);
+    addToInventory(result.item.id);
+
+    const jackpotMsg = result.jackpot ? "\n🎰 JACKPOT! Item de tier superior!" : "";
+    setCompanionReaction(context, `${companion.name}: Tirei ${result.item.name}!${jackpotMsg}`, true);
+    onDone(`🎲 Lucky Draw (${tier}):\n  ${result.item.name} — ${result.item.description}${jackpotMsg}\n(-${price} XP)`, { display: "system" });
     return null;
   }
 
