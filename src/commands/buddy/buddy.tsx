@@ -12,7 +12,7 @@ import { getSessionSummary } from '../../buddy/skills.js'
 import { addReminder } from '../../buddy/reminders.js'
 import { OUTFITS, getUnlockedOutfits, getActiveOutfit, equipOutfit, equipHat, checkAndUnlockOutfits, getOutfitRequirements, getHatRequirements } from '../../buddy/outfits.js'
 import { addMemory, getMemories } from '../../buddy/memory.js'
-import { getEvolution, getEvolutionChain, getEvolutionTier } from '../../buddy/evolution.js'
+import { getEvolution, getEvolutionTier } from '../../buddy/evolution.js'
 import { checkShinyBug, checkDoubleRainbow, checkMidnightEvolve } from '../../buddy/easter-eggs.js'
 import { getTodayJournal, formatJournal } from '../../buddy/journal.js'
 import { getSeasonalMessage } from '../../buddy/seasonal.js'
@@ -69,7 +69,6 @@ function titleCase(s: string): string {
 
 function createStoredCompanion(): StoredCompanion {
   const userId = companionUserId()
-  const { bones } = rollWithSeed(`${userId}:buddy`)
   const prefix = pickDeterministic(NAME_PREFIXES, `${userId}:prefix`)
   const suffix = pickDeterministic(NAME_SUFFIXES, `${userId}:suffix`)
   const personality = pickDeterministic(PERSONALITIES, `${userId}:personality`)
@@ -958,6 +957,8 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
   }
 
   if (arg !== '') {
+    // If it's a known subcommand, we would have matched it above.
+    // If we reach here with an argument, it's either an invalid command or "help".
     showHelp(onDone)
     return null
   }
@@ -987,6 +988,27 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
     )
     return null
   }
+
+  // Force observer validation for pure '/buddy' (pet) to complete itself immediately
+  saveGlobalConfig(current => {
+    const todayStr = getTodayString()
+    let questData = current.companionQuests
+    if (questData?.date !== todayStr) questData = { date: todayStr, completed: {} }
+
+    const q = getTodayQuests().find(q => q.id === 'buddy_pet')
+    if (q && !questData.completed[q.id]) {
+      questData.completed[q.id] = true
+      return {
+        ...current,
+        companionQuests: questData,
+        companion: current.companion ? {
+          ...current.companion,
+          xp: Math.round(((current.companion.xp ?? 0) + q.xpReward) * 10) / 10
+        } : undefined
+      }
+    }
+    return current
+  })
 
   // Increment pet count
   saveGlobalConfig(current => ({

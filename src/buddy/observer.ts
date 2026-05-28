@@ -389,22 +389,17 @@ export async function fireCompanionObserver(
        return
     }
 
-<<<<<<< HEAD
-    // Track successful Bash execution (first non-error bash from the end)
-    if (msg.name === 'Bash' && !foundBashSuccess) {
-      foundBashSuccess = true
-      lastBashContent = contentStr
-=======
     // Occasional success reaction (approx 20% chance on successful Bash/tool execution)
-    if (lastMessage.name === 'Bash' && !isError && !isBashFailure) {
+    const lastMessage = messages[messages.length - 1]
+    if (lastMessage && lastMessage.type === 'tool_result' && msg.name === 'Bash' && !isError && !isBashFailure) {
         // Bash success: +0.1 XP
         incrementStat('totalBashes')
         grantXp(companion.name, 0.1)
 
         let bashCommand = ''
-        const toolUseMsg = messages.find(m => m.type === 'assistant' && Array.isArray(m.content) && m.content.some(c => c.type === 'tool_use' && c.id === lastMessage.tool_use_id))
+        const toolUseMsg = messages.find(m => m.type === 'assistant' && Array.isArray(m.content) && m.content.some((c: any) => c.type === 'tool_use' && c.id === lastMessage.tool_use_id))
         if (toolUseMsg && Array.isArray(toolUseMsg.content)) {
-          const toolCall = toolUseMsg.content.find(c => c.type === 'tool_use' && c.id === lastMessage.tool_use_id)
+          const toolCall = toolUseMsg.content.find((c: any) => c.type === 'tool_use' && c.id === lastMessage.tool_use_id)
           if (toolCall && typeof toolCall.input === 'object' && toolCall.input !== null && 'command' in toolCall.input) {
             bashCommand = String(toolCall.input.command)
           }
@@ -449,7 +444,6 @@ export async function fireCompanionObserver(
               // No upstream or not in git repo — ignore
             }
         }
->>>>>>> 0bc3f1a (feat: implementando feature de daily quests com recompensa de xp.)
     }
   }
 
