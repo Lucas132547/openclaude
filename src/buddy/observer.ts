@@ -821,7 +821,7 @@ export async function fireCompanionObserver(
           /Exit code -?[1-9]\d*/.test(contentStr));
 
       if (isBashTool && block.tool_use_id) {
-        const toolUseMsg = messages.find(
+        const toolUseMsg = (allMessages || messages).find(
           (m) =>
             m.type === "assistant" &&
             Array.isArray(m.content) &&

@@ -26,7 +26,9 @@ import {
   getUnlockedOutfits,
   getActiveOutfit,
   equipOutfit,
+  unequipOutfit,
   equipHat,
+  unequipHat,
   checkAndUnlockOutfits,
   getOutfitRequirements,
   getHatRequirements,
@@ -138,7 +140,7 @@ function setCompanionReaction(
 
 function showHelp(onDone: LocalJSXCommandOnDone): void {
   onDone(
-    "Uso: /buddy [status|mute|unmute|compact|decompact|preview|rename|reroll|brincar|alimentar|hidratei|quests|stats|outfits|equipar|outfit|chapeu|resumo|lembrar|memorias|evolve|requisitos|pet premium|achievements|journal|shop|buy|equip|unequip|inventory|abilities|draw|help]\n\nExecute /buddy sem argumentos para chocar seu companion na primeira vez, depois acaricie nas próximas.\n\nFontes de XP:\n  Bash com sucesso: +0.1 XP\n  Read/Write/Edit/Search: +0.1 XP\n  Pet diário: +1 XP (primeiro /buddy do dia)\n  Task concluída: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n  Brincar: +0.5 XP (cooldown: 1h)\n  Hidratei: +0.5 XP (cooldown: 1h)\n  Quests: +1 a +5 XP (diário)\n  Easter eggs: +3 a +20 XP\n\nComandos:\n  /buddy rename <nome> — Custo: 5 XP, Requer Level 2\n  /buddy reroll — Gratuito (Temporariamente)\n  /buddy reroll especie — Custo: 50 XP (Rerrola para outra espécie do mesmo Tier de evolução)\n  /buddy brincar — Brinque com seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy hidratei — Avisa que você bebeu água e arrumou a postura (+0.5 XP, cooldown: 1h)\n  /buddy quests — Veja suas missões diárias\n  /buddy pet premium — Ativa modo premium 1h (1 XP)\n  /buddy outfit <nome> — Equipa outfit (2 XP)\n  /buddy evolve — Evolui species (50 XP, Level 5+)\n  /buddy compact — Modo compacto (face de 1 linha)\n  /buddy decompact — Modo completo (sprite 24x10)\n  /buddy preview — Mostra todas as espécies\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)\n  /buddy outfits — Veja os outfits disponíveis\n  /buddy equipar <nome> — Equipe um outfit\n  /buddy chapeu <nome> — Troque seu chapéu\n  /buddy requisitos — Veja requisitos de outfits e chapéus\n  /buddy lembrar <min> <texto> — Define um lembrete\n  /buddy memorias — Veja as memórias do seu buddy\n  /buddy journal — Diário de hoje\n  /buddy achievements — Veja suas conquistas\n  /buddy shop — Visite a loja de itens\n  /buddy shop <categoria> — Filtra por categoria\n  /buddy buy <item-id> — Compra um item com XP\n  /buddy equip <item-id> — Equipa um item\n  /buddy unequip <item-id> — Desequipa um item\n  /buddy inventory — Veja seus itens\n  /buddy abilities — Veja abilities ativas\n  /buddy draw [comum|raro|epico] — Lucky Draw",
+    "Uso: /buddy [status|mute|unmute|compact|decompact|preview|rename|reroll|brincar|alimentar|hidratei|quests|stats|outfits|equipar|outfit|chapeu|resumo|lembrar|memorias|evolve|requisitos|pet premium|achievements|journal|shop|buy|equip|unequip|inventory|abilities|draw|help]\n\nExecute /buddy sem argumentos para chocar seu companion na primeira vez, depois acaricie nas próximas.\n\nFontes de XP:\n  Bash com sucesso: +0.1 XP\n  Read/Write/Edit/Search: +0.1 XP\n  Pet diário: +1 XP (primeiro /buddy do dia)\n  Task concluída: +3 XP\n  Alimentar: +0.5 XP (cooldown: 1h)\n  Brincar: +0.5 XP (cooldown: 1h)\n  Hidratei: +0.5 XP (cooldown: 1h)\n  Quests: +1 a +5 XP (diário)\n  Easter eggs: +3 a +20 XP\n\nComandos:\n  /buddy rename <nome> — Custo: 5 XP, Requer Level 2\n  /buddy reroll — Gratuito (Temporariamente)\n  /buddy reroll especie — Custo: 50 XP (Rerrola para outra espécie do mesmo Tier de evolução)\n  /buddy brincar — Brinque com seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy alimentar — Alimente seu buddy (+0.5 XP, cooldown: 1h)\n  /buddy hidratei — Avisa que você bebeu água e arrumou a postura (+0.5 XP, cooldown: 1h)\n  /buddy quests — Veja suas missões diárias\n  /buddy pet premium — Ativa modo premium 1h (1 XP)\n  /buddy outfit <nome> — Equipa outfit (2 XP)\n  /buddy evolve — Evolui species (50 XP, Level 4+)\n  /buddy compact — Modo compacto (face de 1 linha)\n  /buddy decompact — Modo completo (sprite 24x10)\n  /buddy preview — Mostra todas as espécies\n  /buddy stats — Mostra estatísticas do buddy\n  /buddy resumo — Resumo da sessão (Level 4+)\n  /buddy outfits — Veja os outfits disponíveis\n  /buddy equipar <nome> — Equipe um outfit\n  /buddy chapeu <nome> — Troque seu chapéu\n  /buddy requisitos — Veja requisitos de outfits e chapéus\n  /buddy lembrar <min> <texto> — Define um lembrete\n  /buddy memorias — Veja as memórias do seu buddy\n  /buddy journal — Diário de hoje\n  /buddy achievements — Veja suas conquistas\n  /buddy shop — Visite a loja de itens\n  /buddy shop <categoria> — Filtra por categoria\n  /buddy buy <item-id> — Compra um item com XP\n  /buddy equip <item-id> — Equipa um item\n  /buddy unequip <item-id> — Desequipa um item\n  /buddy inventory — Veja seus itens\n  /buddy abilities — Veja abilities ativas\n  /buddy draw [comum|raro|epico] — Lucky Draw",
     { display: 'system' },
   )
 }
@@ -868,6 +870,13 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
       return null;
     }
 
+    if (outfitName === "nenhum" || outfitName === "none" || outfitName === "remover") {
+      unequipOutfit();
+      setCompanionReaction(context, `${companion.name}: Ah... de volta ao normal!`, true);
+      onDone(`Outfit removido com sucesso!`, { display: "system" });
+      return null;
+    }
+
     const outfit = OUTFITS.find(
       (o) => o.name.toLowerCase() === outfitName || o.id === outfitName,
     );
@@ -920,6 +929,13 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
         `🎩 Chapéus do ${companion.name}:\n${list}\n\nUse /buddy chapeu <nome> para equipar.`,
         { display: "system" },
       );
+      return null;
+    }
+
+    if (hatName === "nenhum" || hatName === "none" || hatName === "remover") {
+      unequipHat();
+      setCompanionReaction(context, `${companion.name}: Cabelos ao vento!`, true);
+      onDone(`Chapéu removido com sucesso!`, { display: "system" });
       return null;
     }
 
@@ -1017,6 +1033,13 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
       return null;
     }
 
+    if (outfitName === "nenhum" || outfitName === "none" || outfitName === "remover") {
+      unequipOutfit();
+      setCompanionReaction(context, `${companion.name}: Ah... de volta ao normal!`, true);
+      onDone(`Outfit removido com sucesso!`, { display: "system" });
+      return null;
+    }
+
     const outfit = OUTFITS.find(
       (o) => o.name.toLowerCase() === outfitName || o.id === outfitName,
     );
@@ -1065,7 +1088,7 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
     return null;
   }
 
-  // Evolução: 50 XP, Level 5+, cadeia fixa
+  // Evolução: 50 XP, Level 4+, cadeia fixa
   if (baseCommand === "evolve") {
     const companion = getCompanion();
     if (!companion) {
@@ -1078,9 +1101,9 @@ Humor: ${mood.emoji} "${mood.text}"${evolvedFrom}`,
     const xp = companion.xp ?? 0;
     const levelInfo = getLevelInfo(xp);
 
-    if (levelInfo.level < 5) {
+    if (levelInfo.level < 4) {
       onDone(
-        `Evolução requer Level 5. Seu buddy está no Level ${levelInfo.level}.`,
+        `Evolução requer Level 4. Seu buddy está no Level ${levelInfo.level}.`,
         { display: "system" },
       );
       return null;
